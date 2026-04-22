@@ -3,17 +3,20 @@ import { motion } from "framer-motion";
 import { Heart, Star } from "lucide-react";
 
 const MovieCard = ({
-  movie: { id, title, vote_average, poster_path, release_date, original_language },
+  movie,
   isWatchlisted,
-  onToggleWatchlist
+  onToggleWatchlist,
+  onClick
 }) => {
+  const { id, title, vote_average, poster_path, release_date, original_language } = movie;
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -5 }}
-      className="movie-card group relative"
+      className="movie-card group relative cursor-pointer"
+      onClick={() => onClick(movie)}
     >
       <div className="relative overflow-hidden rounded-2xl">
         <img

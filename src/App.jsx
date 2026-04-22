@@ -1,12 +1,13 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Search from "./components/Search";
 import Spinner from "./components/Spinner";
 import MovieCard from "./components/MovieCard";
 import Filters from "./components/Filters";
+import MovieDetails from "./components/MovieDetails";
 import { useDebounce } from "react-use";
 import { getTrendingMovies, updateSearchCount } from "./appwrite";
-import { Bookmark, LayoutGrid, TrendingUp } from "lucide-react";
+import { Bookmark, LayoutGrid, TrendingUp, Sparkles } from "lucide-react";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -24,27 +25,49 @@ const App = () => {
   const [movieList, setMovieList] = useState([]);
   const [trendingMovies, setTrendingMovies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   
   // New States
   const [selectedGenre, setSelectedGenre] = useState(0);
   const [sortBy, setSortBy] = useState("popularity.desc");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [selectedMovie, setSelectedMovie] = useState(null);
   const [watchlist, setWatchlist] = useState(() => {
     const saved = localStorage.getItem("watchlist");
     return saved ? JSON.parse(saved) : [];
   });
 
-  useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
+  const observer = useRef();
+  const lastMovieElementRef = useCallback(node => {
+    if (isLoading || isFetchingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prev => prev + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [isLoading, isFetchingMore, hasMore]);
 
-  const fetchMovies = useCallback(async (query = "") => {
-    setIsLoading(true);
+  useDebounce(() => {
+    setDebouncedSearchTerm(searchTerm);
+    setPage(1);
+    setMovieList([]);
+  }, 500, [searchTerm]);
+
+  const fetchMovies = useCallback(async (query = "", pageNum = 1) => {
+    if (pageNum === 1) setIsLoading(true);
+    else setIsFetchingMore(true);
+    
     setErrorMessage("");
     try {
       let endpoint;
       if (query) {
-        endpoint = `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`;
+        endpoint = `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=${pageNum}`;
       } else {
-        endpoint = `${API_BASE_URL}/discover/movie?sort_by=${sortBy}`;
+        endpoint = `${API_BASE_URL}/discover/movie?sort_by=${sortBy}&page=${pageNum}`;
         if (selectedGenre !== 0) {
           endpoint += `&with_genres=${selectedGenre}`;
         }
@@ -54,9 +77,11 @@ const App = () => {
       if (!response.ok) throw new Error("Failed to fetch movies");
       
       const data = await response.json();
-      setMovieList(data.results || []);
+      
+      setMovieList(prev => pageNum === 1 ? data.results : [...prev, ...data.results]);
+      setHasMore(data.page < data.total_pages);
 
-      if (query && data.results.length > 0) {
+      if (query && data.results.length > 0 && pageNum === 1) {
         await updateSearchCount(query, data.results[0]);
       }
     } catch (error) {
@@ -64,13 +89,14 @@ const App = () => {
       setErrorMessage("Error fetching movies. Please try again later");
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
     }
   }, [selectedGenre, sortBy]);
 
   const loadTrendingMovies = async () => {
     try {
       const movies = await getTrendingMovies();
-      setTrendingMovies(movies);
+      setTrendingMovies(movies || []);
     } catch (error) {
       console.error(`Error fetching trending movies: ${error}`);
     }
@@ -86,12 +112,15 @@ const App = () => {
   };
 
   useEffect(() => {
-    fetchMovies(debouncedSearchTerm);
-  }, [debouncedSearchTerm, fetchMovies]);
+    fetchMovies(debouncedSearchTerm, page);
+  }, [debouncedSearchTerm, page, selectedGenre, sortBy]); // Added genre/sort dependencies
 
   useEffect(() => {
     loadTrendingMovies();
-  }, []);
+    // Reset page when filters change
+    setPage(1);
+    setMovieList([]);
+  }, [selectedGenre, sortBy]);
 
   return (
     <main className="overflow-x-hidden">
@@ -106,10 +135,7 @@ const App = () => {
           >
             <div className="flex justify-center mb-6">
               <div className="bg-accent/10 px-4 py-1.5 rounded-full border border-accent/20 flex items-center gap-2">
-                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
-                </span>
+                 <Sparkles size={14} className="text-accent animate-pulse" />
                 <span className="text-accent text-xs font-bold uppercase tracking-wider">Now Live: Discover 2026 Releases</span>
               </div>
             </div>
@@ -147,9 +173,16 @@ const App = () => {
                   initial={{ opacity: 0, x: 50 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -10, transition: { duration: 0.2 } }}
+                  onClick={() => setSelectedMovie({
+                    id: movie.movie_id,
+                    title: movie.searchTerm,
+                    poster_path: movie.poster_url.split('/w500/')[1]
+                  })}
+                  className="cursor-pointer"
                 >
                   <p>{index + 1}</p>
-                  <img src={movie.poster_url} alt={movie.title} />
+                  <img src={movie.poster_url} alt={movie.searchTerm} />
                 </motion.li>
               ))}
             </ul>
@@ -171,7 +204,7 @@ const App = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoading && movieList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Spinner />
               <p className="text-gray-100 mt-4 animate-pulse">Curating the best movies for you...</p>
@@ -180,7 +213,7 @@ const App = () => {
             <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl text-center">
               <p className="text-red-400 font-medium">{errorMessage}</p>
               <button 
-                onClick={() => fetchMovies(debouncedSearchTerm)}
+                onClick={() => fetchMovies(debouncedSearchTerm, 1)}
                 className="mt-4 text-white underline decoration-white/30 underline-offset-4 hover:decoration-white"
               >
                 Try refreshing
@@ -189,16 +222,38 @@ const App = () => {
           ) : (
             <motion.ul layout className="grid">
               <AnimatePresence mode="popLayout">
-                {movieList.map((movie) => (
-                  <MovieCard 
-                    key={movie.id} 
-                    movie={movie} 
-                    isWatchlisted={watchlist.includes(movie.id)}
-                    onToggleWatchlist={toggleWatchlist}
-                  />
-                ))}
+                {movieList.map((movie, index) => {
+                  if (movieList.length === index + 1) {
+                    return (
+                      <div ref={lastMovieElementRef} key={movie.id + index}>
+                        <MovieCard 
+                          movie={movie} 
+                          isWatchlisted={watchlist.includes(movie.id)}
+                          onToggleWatchlist={toggleWatchlist}
+                          onClick={setSelectedMovie}
+                        />
+                      </div>
+                    )
+                  } else {
+                    return (
+                      <MovieCard 
+                        key={movie.id + index} 
+                        movie={movie} 
+                        isWatchlisted={watchlist.includes(movie.id)}
+                        onToggleWatchlist={toggleWatchlist}
+                        onClick={setSelectedMovie}
+                      />
+                    )
+                  }
+                })}
               </AnimatePresence>
             </motion.ul>
+          )}
+
+          {isFetchingMore && (
+             <div className="flex justify-center py-10">
+                <Spinner />
+             </div>
           )}
           
           {!isLoading && movieList.length === 0 && (
@@ -214,6 +269,18 @@ const App = () => {
           )}
         </section>
       </div>
+
+      {/* Modal Backdrop/Presence */}
+      <AnimatePresence>
+        {selectedMovie && (
+          <MovieDetails 
+            movie={selectedMovie} 
+            onClose={() => setSelectedMovie(null)}
+            isWatchlisted={watchlist.includes(selectedMovie.id)}
+            onToggleWatchlist={toggleWatchlist}
+          />
+        )}
+      </AnimatePresence>
       
       <footer className="mt-32 pb-12 border-t border-white/5 pt-12">
         <div className="wrapper !py-0 flex flex-col md:flex-row justify-between items-center gap-6">
