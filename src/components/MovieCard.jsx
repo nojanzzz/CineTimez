@@ -32,6 +32,7 @@ const MovieCard = ({
         <button
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent opening the movie details modal
             onToggleWatchlist(id);
           }}
           className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition-all duration-300 ${

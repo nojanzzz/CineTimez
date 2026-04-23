@@ -108,7 +108,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
               {trailer ? (
                 <div className="w-full h-full relative">
                   <iframe
-                    src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&mute=1&rel=0&modestbranding=1`}
+                    src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0&modestbranding=1`}
                     title={`${movie.title} Trailer`}
                     className="w-full h-full absolute inset-0"
                     frameBorder="0"
@@ -116,24 +116,17 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
                     allowFullScreen
                   ></iframe>
                   
-                  {/* Safe Fallback Button */}
-                  <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  {/* YouTube Link Indicator */}
+                  <div className="absolute bottom-4 left-4 z-10">
                      <a 
                        href={`https://www.youtube.com/watch?v=${trailer.key}`} 
                        target="_blank" 
                        rel="noopener noreferrer"
-                       className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-4 py-2 rounded-full border border-white/10 flex items-center gap-2 hover:bg-accent hover:border-accent transition-all"
+                       className="bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-4 py-2 rounded-lg border border-white/10 flex items-center gap-2 hover:bg-accent hover:border-accent transition-all uppercase tracking-widest"
                      >
-                       <Play size={12} fill="currentColor" />
-                       OPEN IN YOUTUBE
+                       <Play size={10} fill="currentColor" />
+                       Watch on YouTube
                      </a>
-                  </div>
-
-                  <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 pointer-events-none z-10">
-                     <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest flex items-center gap-2">
-                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                        Official {trailer.type}
-                     </p>
                   </div>
                 </div>
               ) : (
