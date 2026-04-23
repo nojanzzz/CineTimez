@@ -5,6 +5,7 @@ import Spinner from "./components/Spinner";
 import MovieCard from "./components/MovieCard";
 import Filters from "./components/Filters";
 import MovieDetails from "./components/MovieDetails";
+import CyberBackground from "./components/CyberBackground";
 import { useDebounce } from "react-use";
 import { getTrendingMovies, updateSearchCount } from "./appwrite";
 import { Bookmark, LayoutGrid, TrendingUp, Sparkles } from "lucide-react";
@@ -21,6 +22,7 @@ const API_OPTIONS = {
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [contentType, setContentType] = useState("movie");
   const [errorMessage, setErrorMessage] = useState("");
   const [movieList, setMovieList] = useState([]);
   const [trendingMovies, setTrendingMovies] = useState([]);
@@ -30,6 +32,7 @@ const App = () => {
   
   // New States
   const [selectedGenre, setSelectedGenre] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState("");
   const [sortBy, setSortBy] = useState("popularity.desc");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -65,11 +68,14 @@ const App = () => {
     try {
       let endpoint;
       if (query) {
-        endpoint = `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=${pageNum}`;
+        endpoint = `${API_BASE_URL}/search/${contentType}?query=${encodeURIComponent(query)}&page=${pageNum}`;
       } else {
-        endpoint = `${API_BASE_URL}/discover/movie?sort_by=${sortBy}&page=${pageNum}`;
+        endpoint = `${API_BASE_URL}/discover/${contentType}?sort_by=${sortBy}&page=${pageNum}`;
         if (selectedGenre !== 0) {
           endpoint += `&with_genres=${selectedGenre}`;
+        }
+        if (selectedLanguage) {
+          endpoint += `&with_original_language=${selectedLanguage}`;
         }
       }
 
@@ -77,6 +83,7 @@ const App = () => {
       if (!response.ok) throw new Error("Failed to fetch movies");
       
       const data = await response.json();
+      console.log(`[CineTimez] Fetched ${data.results.length} results for ${contentType}`);
       
       setMovieList(prev => pageNum === 1 ? data.results : [...prev, ...data.results]);
       setHasMore(data.page < data.total_pages);
@@ -91,7 +98,7 @@ const App = () => {
       setIsLoading(false);
       setIsFetchingMore(false);
     }
-  }, [selectedGenre, sortBy]);
+  }, [selectedGenre, sortBy, selectedLanguage, contentType]);
 
   const loadTrendingMovies = async () => {
     try {
@@ -111,52 +118,69 @@ const App = () => {
     });
   };
 
+  // Unified Fetch & Reset Logic for instant responsiveness
   useEffect(() => {
-    fetchMovies(debouncedSearchTerm, page);
-  }, [debouncedSearchTerm, page, selectedGenre, sortBy]); // Added genre/sort dependencies
-
-  useEffect(() => {
-    loadTrendingMovies();
-    // Reset page when filters change
-    setPage(1);
+    // 1. Reset state for fresh fetch
     setMovieList([]);
-  }, [selectedGenre, sortBy]);
+    setErrorMessage("");
+    setPage(1);
+    
+    // 2. Fetch data (Force page 1)
+    fetchMovies(debouncedSearchTerm, 1);
+    
+    // 3. Refresh trending
+    loadTrendingMovies();
+  }, [debouncedSearchTerm, selectedGenre, sortBy, selectedLanguage, contentType]);
+
+  // Separate effect for Pagination only
+  useEffect(() => {
+    if (page > 1) {
+      fetchMovies(debouncedSearchTerm, page);
+    }
+  }, [page, debouncedSearchTerm, fetchMovies]);
 
   return (
     <main className="overflow-x-hidden">
-      <div className="pattern" />
+      <CyberBackground />
       
       <div className="wrapper">
-        <header className="relative z-20">
+        <header className="relative z-20 pt-10">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
+            className="text-center max-w-4xl mx-auto mb-16"
           >
-            <div className="flex justify-center mb-6">
-              <div className="bg-accent/10 px-4 py-1.5 rounded-full border border-accent/20 flex items-center gap-2">
-                 <Sparkles size={14} className="text-accent animate-pulse" />
-                <span className="text-accent text-xs font-bold uppercase tracking-wider">Now Live: Discover 2026 Releases</span>
-              </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/5 border border-accent/20 mb-10 shadow-[0_0_20px_rgba(255,61,61,0.05)]">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+              </span>
+              <span className="text-accent text-[10px] font-black uppercase tracking-[0.3em]">Live: 2026 Collection Unveiled</span>
             </div>
 
-            <h1 className="leading-tight">
-              Discover Your Next <span className="text-gradient">Cinematic</span> Journey
+            <h1 className="text-6xl md:text-8xl font-black text-white leading-[0.85] tracking-[-0.05em] mb-8">
+              The <span className="text-accent">Unlimited</span> <br />
+              Cinema Experience
             </h1>
-            <p className="text-gray-100/60 text-center max-w-2xl mx-auto mt-4 text-base sm:text-lg">
-              Explore thousands of movies, track your favorites, and stay ahead of the trends with CineTimez's premium browsing experience.
+
+            <p className="text-gray-500 text-base md:text-lg max-w-2xl mx-auto font-medium leading-relaxed">
+              Uncover thousands of global masterpieces, curate your private library, 
+              and stay ahead of the trends with CineTimez's elite browsing interface.
             </p>
           </motion.div>
           
-          <div className="relative mt-12">
-            <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-          </div>
+          <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
           <Filters 
             selectedGenre={selectedGenre} 
             setSelectedGenre={setSelectedGenre}
             sortBy={sortBy}
             setSortBy={setSortBy}
+            selectedLanguage={selectedLanguage}
+            setSelectedLanguage={setSelectedLanguage}
+            contentType={contentType}
+            setContentType={setContentType}
           />
         </header>
 

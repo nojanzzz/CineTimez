@@ -31,7 +31,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
       try {
         // Using append_to_response to get all data in ONE request (much more reliable)
         const response = await fetch(
-          `${API_BASE_URL}/movie/${movie.id}?append_to_response=videos,credits,similar`, 
+          `${API_BASE_URL}/movie/${movie.id}?append_to_response=videos,credits,recommendations`, 
           API_OPTIONS
         );
 
@@ -43,7 +43,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
         
         setDetails(data);
         setCast(data.credits?.cast?.slice(0, 10) || []);
-        setSimilar(data.similar?.results?.slice(0, 6) || []);
+        setSimilar(data.recommendations?.results?.slice(0, 6) || []);
         
         // Comprehensive trailer search
         const videos = data.videos?.results || [];
@@ -79,18 +79,18 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
         initial={{ scale: 0.9, y: 30, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, y: 30, opacity: 0 }}
-        className="bg-[#0f0d23] border border-white/10 w-full max-w-6xl max-h-[90vh] rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] relative flex flex-col lg:flex-row"
+        className="bg-dark-100 border border-white/5 w-full max-w-6xl max-h-[90vh] rounded-[2rem] overflow-hidden shadow-[0_0_80px_rgba(255,61,61,0.15)] relative flex flex-col lg:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 z-30 p-2.5 rounded-full bg-black/50 text-white/80 hover:text-white hover:bg-black/80 transition-all border border-white/10"
+          className="absolute top-6 right-6 z-30 p-2.5 rounded-full bg-black/50 text-white/80 hover:text-white hover:bg-accent transition-all border border-white/5"
         >
           <X size={20} />
         </button>
 
         {isLoading ? (
-          <div className="w-full h-[500px] flex flex-col items-center justify-center gap-5 bg-[#0f0d23]">
+          <div className="w-full h-[500px] flex flex-col items-center justify-center gap-5 bg-dark-100">
              <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
              <p className="text-accent/60 text-xs font-bold uppercase tracking-[0.2em]">Preparing Cinema...</p>
           </div>
@@ -130,22 +130,29 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
                   </div>
                 </div>
               ) : (
-                <div className="relative w-full h-full">
+                <div className="relative w-full h-full flex flex-col items-center justify-center p-10 text-center">
                   <img
                     src={`https://image.tmdb.org/t/p/original/${movie.poster_path}`}
                     alt={movie.title}
-                    className="w-full h-full object-cover opacity-40 blur-sm"
+                    className="w-full h-full absolute inset-0 object-cover opacity-20 blur-sm"
                   />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <Film size={48} className="text-white/10 mb-6" />
-                    <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em]">Trailer Vault Empty</p>
-                  </div>
+                  <Film size={48} className="text-white/10 mb-6 relative z-10" />
+                  <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-6 relative z-10">Trailer Vault Empty</p>
+                  <a 
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' trailer')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative z-10 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-all flex items-center gap-2"
+                  >
+                    <Globe size={14} />
+                    Search on YouTube
+                  </a>
                 </div>
               )}
             </div>
 
             {/* Cinematic Details */}
-            <div className="w-full lg:w-[40%] p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-[#0f0d23] border-l border-white/5">
+            <div className="w-full lg:w-[40%] p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-dark-100 border-l border-white/5">
               <div className="flex flex-wrap items-center gap-2 mb-8">
                 {details?.genres?.slice(0, 3).map(g => (
                   <span key={g.id} className="px-3 py-1 rounded-md bg-accent/5 text-accent text-[9px] font-black uppercase tracking-widest border border-accent/10">
@@ -177,7 +184,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
 
               {/* Navigation Tabs */}
               <div className="flex border-b border-white/5 mb-10 gap-10">
-                {["overview", "cast", "similar"].map((tab) => (
+                {["overview", "cast", "recommended"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -216,29 +223,35 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
                 {activeTab === "cast" && (
                   <motion.div 
                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                     className="grid grid-cols-2 gap-8"
+                     className="grid grid-cols-1 gap-4"
                   >
                     {cast.length > 0 ? cast.map(person => (
-                      <div key={person.id} className="flex items-center gap-4 group">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-white/5 grayscale group-hover:grayscale-0 transition-all duration-500">
+                      <a 
+                        key={person.id} 
+                        href={`https://www.themoviedb.org/person/${person.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-4 group p-2 rounded-2xl hover:bg-white/5 transition-all duration-300"
+                      >
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-white/5 group-hover:border-accent group-hover:shadow-[0_0_20px_rgba(171,139,255,0.4)] transition-all duration-500">
                           <img 
                             src={person.profile_path ? `https://image.tmdb.org/t/p/w185/${person.profile_path}` : "/no-movie.png"} 
                             alt={person.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                           />
                         </div>
                         <div className="overflow-hidden">
-                          <p className="text-white text-[11px] font-bold truncate">{person.name}</p>
-                          <p className="text-gray-600 text-[9px] uppercase font-black truncate">{person.character}</p>
+                          <p className="text-white text-[13px] font-bold truncate group-hover:text-accent transition-colors">{person.name}</p>
+                          <p className="text-gray-500 text-[10px] uppercase font-black truncate">{person.character || "Acting Personnel"}</p>
                         </div>
-                      </div>
+                      </a>
                     )) : (
                       <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest text-center col-span-full py-20">Cast Registry Missing</p>
                     )}
                   </motion.div>
                 )}
 
-                {activeTab === "similar" && (
+                {activeTab === "recommended" && (
                   <motion.div 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     className="grid grid-cols-3 gap-4"
