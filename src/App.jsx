@@ -6,6 +6,7 @@ import MovieCard from "./components/MovieCard";
 import Filters from "./components/Filters";
 import MovieDetails from "./components/MovieDetails";
 import CyberBackground from "./components/CyberBackground";
+import MovieSkeleton, { TrendingSkeleton } from "./components/Skeleton";
 import { useDebounce } from "react-use";
 import { getTrendingMovies, updateSearchCount } from "./appwrite";
 import { Bookmark, LayoutGrid, TrendingUp, Sparkles } from "lucide-react";
@@ -41,6 +42,9 @@ const App = () => {
     const saved = localStorage.getItem("watchlist");
     return saved ? JSON.parse(saved) : [];
   });
+  const [showWatchlist, setShowWatchlist] = useState(false);
+  const [watchlistMovies, setWatchlistMovies] = useState([]);
+  const [isFetchingWatchlist, setIsFetchingWatchlist] = useState(false);
 
   const observer = useRef();
   const lastMovieElementRef = useCallback(node => {
@@ -118,19 +122,42 @@ const App = () => {
     });
   };
 
-  // Unified Fetch & Reset Logic for instant responsiveness
+  // Logic to fetch full details for the Watchlist collection
   useEffect(() => {
-    // 1. Reset state for fresh fetch
+    const fetchWatchlistDetails = async () => {
+      if (!showWatchlist || watchlist.length === 0) {
+        setWatchlistMovies([]);
+        return;
+      }
+      
+      setIsFetchingWatchlist(true);
+      try {
+        const moviePromises = watchlist.map(id => 
+          fetch(`${API_BASE_URL}/movie/${id}?api_key=${API_KEY}`, API_OPTIONS).then(res => res.json())
+        );
+        const results = await Promise.all(moviePromises);
+        setWatchlistMovies(results.filter(m => m.id)); // Filter out any failed fetches
+      } catch (error) {
+        console.error("Error fetching watchlist details:", error);
+      } finally {
+        setIsFetchingWatchlist(false);
+      }
+    };
+
+    fetchWatchlistDetails();
+  }, [showWatchlist, watchlist]);
+
+  // Unified Fetch & Reset Logic for main catalog
+  useEffect(() => {
+    if (showWatchlist) return; // Don't fetch catalog if viewing collection
+    
     setMovieList([]);
     setErrorMessage("");
     setPage(1);
     
-    // 2. Fetch data (Force page 1)
     fetchMovies(debouncedSearchTerm, 1);
-    
-    // 3. Refresh trending
     loadTrendingMovies();
-  }, [debouncedSearchTerm, selectedGenre, sortBy, selectedLanguage, contentType]);
+  }, [debouncedSearchTerm, selectedGenre, sortBy, selectedLanguage, contentType, showWatchlist]);
 
   // Separate effect for Pagination only
   useEffect(() => {
@@ -172,19 +199,21 @@ const App = () => {
           
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
-          <Filters 
-            selectedGenre={selectedGenre} 
-            setSelectedGenre={setSelectedGenre}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            selectedLanguage={selectedLanguage}
-            setSelectedLanguage={setSelectedLanguage}
-            contentType={contentType}
-            setContentType={setContentType}
-          />
+          {!showWatchlist && (
+            <Filters 
+              selectedGenre={selectedGenre} 
+              setSelectedGenre={setSelectedGenre}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              selectedLanguage={selectedLanguage}
+              setSelectedLanguage={setSelectedLanguage}
+              contentType={contentType}
+              setContentType={setContentType}
+            />
+          )}
         </header>
 
-        {trendingMovies.length > 0 && !searchTerm && (
+        {trendingMovies.length > 0 && !searchTerm && !showWatchlist && (
           <section className="trending">
             <div className="flex items-center gap-3 mb-10">
               <TrendingUp className="text-accent" />
@@ -213,25 +242,63 @@ const App = () => {
           </section>
         )}
 
-        <section className="all-movies !mt-24">
-          <div className="flex items-center justify-between mb-8">
+        <section className="all-movies !mt-24" >
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
             <div className="flex items-center gap-3">
               <LayoutGrid className="text-accent" />
               <h2 className="!mt-0">
-                {searchTerm ? `Search Results for "${searchTerm}"` : "Explore Catalog"}
+                {showWatchlist ? "My Archived Collection" : searchTerm ? `Results for "${searchTerm}"` : "Explore Catalog"}
               </h2>
             </div>
             
-            <div className="hidden sm:flex items-center gap-2 text-gray-200 text-sm bg-white/5 px-4 py-2 rounded-xl border border-white/10">
-              <Bookmark size={16} />
-              <span>{watchlist.length} Saved</span>
-            </div>
+            <button 
+              onClick={() => setShowWatchlist(!showWatchlist)}
+              className={`flex items-center gap-3 px-6 py-3 rounded-2xl border transition-all duration-500 ${
+                showWatchlist 
+                  ? "bg-accent border-accent text-white shadow-[0_0_30px_rgba(255,61,61,0.3)]" 
+                  : "bg-white/5 border-white/10 text-gray-400 hover:border-white/30 hover:text-white"
+              }`}
+            >
+              <Bookmark size={18} className={showWatchlist ? "fill-white" : ""} />
+              <span className="text-[11px] font-black uppercase tracking-widest">
+                {showWatchlist ? "Back to Discovery" : `View Collection (${watchlist.length})`}
+              </span>
+            </button>
           </div>
 
-          {isLoading && movieList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Spinner />
-              <p className="text-gray-100 mt-4 animate-pulse">Curating the best movies for you...</p>
+          {showWatchlist ? (
+            <div className="min-h-[400px]">
+              {isFetchingWatchlist ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                  {[...Array(Math.max(4, watchlist.length))].map((_, i) => <MovieSkeleton key={i} />)}
+                </div>
+              ) : watchlistMovies.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-32 text-center">
+                   <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/5">
+                      <Bookmark size={32} className="text-gray-700" />
+                   </div>
+                   <h3 className="text-white text-xl font-bold mb-2">Your Archive is Empty</h3>
+                   <p className="text-gray-500 max-w-xs">Start building your private cinematic library by clicking the heart on your favorite titles.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                  {watchlistMovies.map((movie) => (
+                    <MovieCard 
+                      key={movie.id} 
+                      movie={movie} 
+                      isWatchlisted={true}
+                      onToggleWatchlist={toggleWatchlist}
+                      onClick={setSelectedMovie}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {isLoading && movieList.length === 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+              {[...Array(8)].map((_, i) => <MovieSkeleton key={i} />)}
             </div>
           ) : errorMessage ? (
             <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl text-center">
@@ -275,9 +342,9 @@ const App = () => {
           )}
 
           {isFetchingMore && (
-             <div className="flex justify-center py-10">
-                <Spinner />
-             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-10">
+              {[...Array(4)].map((_, i) => <MovieSkeleton key={`more-${i}`} />)}
+            </div>
           )}
           
           {!isLoading && movieList.length === 0 && (
@@ -291,7 +358,9 @@ const App = () => {
               </button>
             </div>
           )}
-        </section>
+          </>
+        )}
+      </section>
       </div>
 
       {/* Modal Backdrop/Presence */}

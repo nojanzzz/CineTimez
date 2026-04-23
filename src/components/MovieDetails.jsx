@@ -162,17 +162,17 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
               </div>
 
               <h2 className="text-3xl lg:text-5xl font-black text-white mb-6 leading-[0.9] tracking-tighter">
-                {movie.title}
+                {details?.title || movie.title}
               </h2>
               
               <div className="flex items-center gap-6 text-gray-500 mb-12 text-[11px] font-bold uppercase tracking-widest">
                 <div className="flex items-center gap-2">
                   <Star size={14} className="text-yellow-500 fill-yellow-500" />
-                  <span className="text-white">{movie.vote_average?.toFixed(1)}</span>
+                  <span className="text-white">{(details?.vote_average || movie.vote_average)?.toFixed(1)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar size={14} />
-                  <span>{movie.release_date?.split("-")[0]}</span>
+                  <span>{(details?.release_date || movie.release_date)?.split("-")[0]}</span>
                 </div>
                 {details?.runtime > 0 && (
                   <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
                   >
                     {tab}
                     {activeTab === tab && (
-                      <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-1 bg-accent shadow-[0_0_10px_#AB8BFF]" />
+                      <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-1 bg-accent shadow-[0_0_10px_#FF3D3D]" />
                     )}
                   </button>
                 ))}
@@ -204,7 +204,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
                 {activeTab === "overview" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <p className="text-gray-400 leading-relaxed text-base mb-12 font-medium">
-                      {movie.overview || "Deep cinematic records for this title are currently restricted."}
+                      {details?.overview || movie.overview || "Deep cinematic records for this title are currently restricted."}
                     </p>
                     
                     <button
