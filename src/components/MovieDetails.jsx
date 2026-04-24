@@ -13,7 +13,7 @@ const API_OPTIONS = {
   },
 };
 
-const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
+const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folders }) => {
   const [details, setDetails] = useState(null);
   const [cast, setCast] = useState([]);
   const [trailer, setTrailer] = useState(null);
@@ -207,16 +207,39 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted }) => {
                       {details?.overview || movie.overview || "Deep cinematic records for this title are currently restricted."}
                     </p>
                     
-                    <button
-                      onClick={() => onToggleWatchlist(movie.id)}
-                      className={`flex items-center justify-center gap-4 w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                        isWatchlisted 
-                          ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white shadow-[0_0_20px_rgba(239,68,68,0.2)]" 
-                          : "bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(255,255,255,0.1)]"
-                      }`}
-                    >
-                      {isWatchlisted ? "Discard from Library" : "Archive to My List"}
-                    </button>
+                    {isWatchlisted ? (
+                      <button
+                        onClick={() => onToggleWatchlist(movie.id)}
+                        className="flex items-center justify-center gap-4 w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                      >
+                        Discard from Library
+                      </button>
+                    ) : (
+                      <div className="flex gap-2 w-full">
+                        <button
+                          onClick={() => onToggleWatchlist(movie.id)}
+                          className="flex-1 flex items-center justify-center gap-4 py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                        >
+                          Archive to My List
+                        </button>
+                        {folders && folders.length > 1 && (
+                          <select 
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                onToggleWatchlist(movie.id, e.target.value);
+                                e.target.value = ""; 
+                              }
+                            }}
+                            className="bg-white/10 text-white font-bold text-xs uppercase tracking-widest rounded-2xl px-4 cursor-pointer outline-none border border-white/5 hover:bg-white/20 transition-all text-center"
+                          >
+                            <option value="" className="bg-dark-100">+ Folder</option>
+                            {folders.filter(f => f.id !== "default").map(f => (
+                              <option key={f.id} value={f.id} className="bg-dark-100">{f.name}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    )}
                   </motion.div>
                 )}
 

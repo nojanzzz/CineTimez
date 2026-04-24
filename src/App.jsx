@@ -8,8 +8,9 @@ import MovieDetails from "./components/MovieDetails";
 import CyberBackground from "./components/CyberBackground";
 import MovieSkeleton, { TrendingSkeleton } from "./components/Skeleton";
 import { useDebounce } from "react-use";
-import { getTrendingMovies, updateSearchCount } from "./appwrite";
-import { Bookmark, LayoutGrid, TrendingUp, Sparkles } from "lucide-react";
+import { getTrendingMovies, updateSearchCount, account, OAuthProvider } from "./appwrite";
+import { Bookmark, LayoutGrid, TrendingUp, Sparkles, FolderPlus, Folder } from "lucide-react";
+import { Toaster, toast } from "sonner";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -38,13 +39,48 @@ const App = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [selectedMovie, setSelectedMovie] = useState(null);
-  const [watchlist, setWatchlist] = useState(() => {
-    const saved = localStorage.getItem("watchlist");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [folders, setFolders] = useState([{ id: "default", name: "All Saved", movies: [] }]);
+  const [activeFolderId, setActiveFolderId] = useState("default");
+  const watchlist = folders.flatMap(f => f.movies);
   const [showWatchlist, setShowWatchlist] = useState(false);
   const [watchlistMovies, setWatchlistMovies] = useState([]);
   const [isFetchingWatchlist, setIsFetchingWatchlist] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const loggedInUser = await account.get();
+        setUser(loggedInUser);
+        const prefs = await account.getPrefs();
+        if (prefs.folders) {
+          setFolders(prefs.folders);
+        } else if (prefs.watchlist) {
+          setFolders([{ id: "default", name: "All Saved", movies: prefs.watchlist }]);
+        }
+      } catch {
+        setUser(null);
+        setFolders([{ id: "default", name: "All Saved", movies: [] }]);
+        setShowWatchlist(false);
+      }
+    };
+    checkUser();
+  }, []);
+
+  const loginWithGoogle = () => {
+    account.createOAuth2Session(OAuthProvider.Google, window.location.origin, window.location.origin);
+  };
+
+  const logout = async () => {
+    try {
+      await account.deleteSession("current");
+      setUser(null);
+      setFolders([{ id: "default", name: "All Saved", movies: [] }]);
+      toast("Successfully logged out");
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
+  };
 
   const observer = useRef();
   const lastMovieElementRef = useCallback(node => {
@@ -60,8 +96,6 @@ const App = () => {
 
   useDebounce(() => {
     setDebouncedSearchTerm(searchTerm);
-    setPage(1);
-    setMovieList([]);
   }, 500, [searchTerm]);
 
   const fetchMovies = useCallback(async (query = "", pageNum = 1) => {
@@ -113,26 +147,53 @@ const App = () => {
     }
   };
 
-  const toggleWatchlist = (movieId) => {
-    setWatchlist(prev => {
-      const exists = prev.includes(movieId);
-      const updated = exists ? prev.filter(id => id !== movieId) : [...prev, movieId];
-      localStorage.setItem("watchlist", JSON.stringify(updated));
-      return updated;
+  const toggleWatchlist = (movieId, targetFolderId = "default") => {
+    if (!user) {
+      loginWithGoogle();
+      return;
+    }
+
+    setFolders(prevFolders => {
+      const isWatchlisted = prevFolders.some(f => f.movies.includes(movieId));
+      
+      let updatedFolders;
+      if (isWatchlisted) {
+        updatedFolders = prevFolders.map(f => ({
+          ...f,
+          movies: f.movies.filter(id => id !== movieId)
+        }));
+        toast("Removed from Library", { icon: '🗑️' });
+      } else {
+        const folderToAdd = showWatchlist ? activeFolderId : targetFolderId;
+        updatedFolders = prevFolders.map(f => 
+          f.id === folderToAdd ? { ...f, movies: [...f.movies, movieId] } : f
+        );
+        const folderName = prevFolders.find(f => f.id === folderToAdd)?.name || "All Saved";
+        toast.success(`Archived to ${folderName}`);
+      }
+      
+      account.updatePrefs({ folders: updatedFolders, watchlist: Array.from(new Set(updatedFolders.flatMap(f => f.movies))) }).catch(err => {
+        console.error("Failed to sync watchlist with Appwrite:", err);
+      });
+      
+      return updatedFolders;
     });
   };
 
   // Logic to fetch full details for the Watchlist collection
   useEffect(() => {
     const fetchWatchlistDetails = async () => {
-      if (!showWatchlist || watchlist.length === 0) {
+      const activeFolder = folders.find(f => f.id === activeFolderId) || folders[0];
+      const moviesToFetch = activeFolder ? activeFolder.movies : [];
+
+      if (!showWatchlist || moviesToFetch.length === 0) {
         setWatchlistMovies([]);
         return;
       }
       
       setIsFetchingWatchlist(true);
       try {
-        const moviePromises = watchlist.map(id => 
+        const moviePromises = moviesToFetch.map(id => 
           fetch(`${API_BASE_URL}/movie/${id}?api_key=${API_KEY}`, API_OPTIONS).then(res => res.json())
         );
         const results = await Promise.all(moviePromises);
@@ -145,7 +206,7 @@ const App = () => {
     };
 
     fetchWatchlistDetails();
-  }, [showWatchlist, watchlist]);
+  }, [showWatchlist, activeFolderId, folders]);
 
   // Unified Fetch & Reset Logic for main catalog
   useEffect(() => {
@@ -168,10 +229,31 @@ const App = () => {
 
   return (
     <main className="overflow-x-hidden">
+      <Toaster theme="dark" position="bottom-right" toastOptions={{ style: { background: '#111', border: '1px solid #333', color: '#fff' } }} />
       <CyberBackground />
       
       <div className="wrapper">
-        <header className="relative z-20 pt-10">
+        <nav className="relative z-20 flex justify-between items-center pt-6 pb-4">
+          <div className="flex items-center gap-2">
+            <div className="bg-accent p-1.5 rounded-lg">
+              <LayoutGrid size={18} className="text-primary" />
+            </div>
+            <span className="text-white font-bold text-xl tracking-tight">CineTimez</span>
+          </div>
+
+          {user ? (
+            <div className="flex items-center gap-4">
+              <span className="text-gray-300 text-sm font-medium hidden sm:block">Welcome, <span className="text-white">{user.name}</span></span>
+              <button onClick={logout} className="text-xs bg-white/10 hover:bg-white/20 border border-white/10 px-4 py-2 rounded-full transition-colors text-white font-medium">Logout</button>
+            </div>
+          ) : (
+            <button onClick={loginWithGoogle} className="flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full font-bold hover:bg-gray-200 transition-colors text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-4 h-4" />
+              Sign In
+            </button>
+          )}
+        </nav>
+        <header className="relative z-20 pt-4">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -252,7 +334,13 @@ const App = () => {
             </div>
             
             <button 
-              onClick={() => setShowWatchlist(!showWatchlist)}
+              onClick={() => {
+                if (!user) {
+                  loginWithGoogle();
+                  return;
+                }
+                setShowWatchlist(!showWatchlist);
+              }}
               className={`flex items-center gap-3 px-6 py-3 rounded-2xl border transition-all duration-500 ${
                 showWatchlist 
                   ? "bg-accent border-accent text-white shadow-[0_0_30px_rgba(255,61,61,0.3)]" 
@@ -268,6 +356,43 @@ const App = () => {
 
           {showWatchlist ? (
             <div className="min-h-[400px]">
+              {/* Folders Tab Bar */}
+              <div className="flex items-center gap-3 mb-10 overflow-x-auto pb-4 custom-scrollbar">
+                {folders.map(folder => (
+                  <button
+                    key={folder.id}
+                    onClick={() => setActiveFolderId(folder.id)}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl whitespace-nowrap transition-all duration-300 font-bold text-xs uppercase tracking-widest ${
+                      activeFolderId === folder.id 
+                        ? 'bg-accent text-white shadow-[0_0_20px_rgba(255,61,61,0.3)]' 
+                        : 'bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10'
+                    }`}
+                  >
+                    <Folder size={14} className={activeFolderId === folder.id ? 'fill-white/20' : ''} />
+                    {folder.name}
+                    <span className="bg-black/30 px-2 py-0.5 rounded-md text-[10px] ml-1">{folder.movies.length}</span>
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => {
+                    const name = prompt("Enter new folder name (e.g. Comfort Anime):");
+                    if (name && name.trim() !== "") {
+                      const newFolder = { id: Date.now().toString(), name: name.trim(), movies: [] };
+                      const newFolders = [...folders, newFolder];
+                      setFolders(newFolders);
+                      setActiveFolderId(newFolder.id);
+                      account.updatePrefs({ folders: newFolders, watchlist: Array.from(new Set(newFolders.flatMap(f => f.movies))) });
+                      toast.success(`Folder "${name}" created`);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-dashed border-white/20 text-gray-400 hover:text-white hover:border-white/40 transition-colors whitespace-nowrap text-xs font-bold uppercase tracking-widest"
+                >
+                  <FolderPlus size={14} />
+                  New Folder
+                </button>
+              </div>
+
               {isFetchingWatchlist ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                   {[...Array(Math.max(4, watchlist.length))].map((_, i) => <MovieSkeleton key={i} />)}
@@ -371,6 +496,7 @@ const App = () => {
             onClose={() => setSelectedMovie(null)}
             isWatchlisted={watchlist.includes(selectedMovie.id)}
             onToggleWatchlist={toggleWatchlist}
+            folders={folders}
           />
         )}
       </AnimatePresence>

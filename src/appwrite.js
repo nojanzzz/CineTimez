@@ -1,4 +1,4 @@
-import {Client, Databases, ID, Query} from "appwrite"
+import {Client, Databases, ID, Query, Account, OAuthProvider} from "appwrite"
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const COLLECTION_ID = import.meta.env.VITE_APPWRITE_COLLECTION_ID;
 const PROJECT_ID = import.meta.env.VITE_APPWRITE_PROJECT_ID;
@@ -8,6 +8,8 @@ const client = new Client()
   .setProject(PROJECT_ID)
 
 const database = new Databases(client);
+export const account = new Account(client);
+export { OAuthProvider };
 
 export const updateSearchCount = async(searchTerm, movie) => {
   try {
