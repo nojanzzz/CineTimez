@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { motion, useSpring, useMotionValue } from "framer-motion";
+import { motion, useMotionValue } from "framer-motion";
 
 const CyberBackground = () => {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-
-  const springConfig = { damping: 50, stiffness: 300 };
-  const springX = useSpring(mouseX, springConfig);
-  const springY = useSpring(mouseY, springConfig);
 
   const [sparks, setSparks] = useState([]);
 
