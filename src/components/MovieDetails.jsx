@@ -1,6 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Play, Star, Calendar, Globe, Users, Film, ChevronDown, Folder } from "lucide-react";
+import {
+  X,
+  Play,
+  Star,
+  Calendar,
+  Globe,
+  Users,
+  Film,
+  ChevronDown,
+  Folder,
+} from "lucide-react";
 import ReactPlayer from "react-player";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
@@ -13,7 +23,16 @@ const API_OPTIONS = {
   },
 };
 
-const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folders, userReview, onSaveReview, onDeleteReview }) => {
+const MovieDetails = ({
+  movie,
+  onClose,
+  onToggleWatchlist,
+  isWatchlisted,
+  folders,
+  userReview,
+  onSaveReview,
+  onDeleteReview,
+}) => {
   const [details, setDetails] = useState(null);
   const [cast, setCast] = useState([]);
   const [trailer, setTrailer] = useState(null);
@@ -22,8 +41,8 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
   const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [showDropdown, setShowDropdown] = useState(false);
-  
-  // Diary States
+
+  // Notes States
   const [isEditingReview, setIsEditingReview] = useState(!userReview);
   const [rating, setRating] = useState(userReview?.rating || 0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -50,8 +69,8 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
       try {
         // Using append_to_response to get all data in ONE request (much more reliable)
         const response = await fetch(
-          `${API_BASE_URL}/movie/${movie.id}?append_to_response=videos,credits,recommendations`, 
-          API_OPTIONS
+          `${API_BASE_URL}/movie/${movie.id}?append_to_response=videos,credits,recommendations`,
+          API_OPTIONS,
         );
 
         if (!response.ok) {
@@ -59,19 +78,21 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
         }
 
         const data = await response.json();
-        
+
         setDetails(data);
         setCast(data.credits?.cast?.slice(0, 10) || []);
         setSimilar(data.recommendations?.results?.slice(0, 6) || []);
-        
+
         // Comprehensive trailer search
         const videos = data.videos?.results || [];
-        const foundTrailer = 
-          videos.find(v => v.official && v.type === "Trailer" && v.site === "YouTube") ||
-          videos.find(v => v.type === "Trailer" && v.site === "YouTube") ||
-          videos.find(v => v.type === "Teaser" && v.site === "YouTube") ||
-          videos.find(v => v.site === "YouTube");
-        
+        const foundTrailer =
+          videos.find(
+            (v) => v.official && v.type === "Trailer" && v.site === "YouTube",
+          ) ||
+          videos.find((v) => v.type === "Trailer" && v.site === "YouTube") ||
+          videos.find((v) => v.type === "Teaser" && v.site === "YouTube") ||
+          videos.find((v) => v.site === "YouTube");
+
         setTrailer(foundTrailer);
       } catch (err) {
         console.error("MovieDetails Fetch Error:", err);
@@ -110,16 +131,25 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
 
         {isLoading ? (
           <div className="w-full h-[500px] flex flex-col items-center justify-center gap-5 bg-dark-100">
-             <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-             <p className="text-accent/60 text-xs font-bold uppercase tracking-[0.2em]">Preparing Cinema...</p>
+            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            <p className="text-accent/60 text-xs font-bold uppercase tracking-[0.2em]">
+              Preparing Cinema...
+            </p>
           </div>
         ) : error ? (
-           <div className="w-full h-[500px] flex flex-col items-center justify-center gap-4 text-center p-10">
-              <Film size={40} className="text-white/10 mb-2" />
-              <h3 className="text-white font-bold text-lg">Connection Lost</h3>
-              <p className="text-gray-400 text-sm max-w-xs mx-auto">We couldn't reach the movie servers. Please check your connection.</p>
-              <button onClick={onClose} className="mt-4 px-8 py-3 bg-accent text-white rounded-xl font-bold text-sm">Close</button>
-           </div>
+          <div className="w-full h-[500px] flex flex-col items-center justify-center gap-4 text-center p-10">
+            <Film size={40} className="text-white/10 mb-2" />
+            <h3 className="text-white font-bold text-lg">Connection Lost</h3>
+            <p className="text-gray-400 text-sm max-w-xs mx-auto">
+              We couldn't reach the movie servers. Please check your connection.
+            </p>
+            <button
+              onClick={onClose}
+              className="mt-4 px-8 py-3 bg-accent text-white rounded-xl font-bold text-sm"
+            >
+              Close
+            </button>
+          </div>
         ) : (
           <>
             {/* Media Canvas */}
@@ -134,18 +164,18 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   ></iframe>
-                  
+
                   {/* YouTube Link Indicator */}
                   <div className="absolute bottom-4 left-4 z-10">
-                     <a 
-                       href={`https://www.youtube.com/watch?v=${trailer.key}`} 
-                       target="_blank" 
-                       rel="noopener noreferrer"
-                       className="bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-4 py-2 rounded-lg border border-white/10 flex items-center gap-2 hover:bg-accent hover:border-accent transition-all uppercase tracking-widest"
-                     >
-                       <Play size={10} fill="currentColor" />
-                       Watch on YouTube
-                     </a>
+                    <a
+                      href={`https://www.youtube.com/watch?v=${trailer.key}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-4 py-2 rounded-lg border border-white/10 flex items-center gap-2 hover:bg-accent hover:border-accent transition-all uppercase tracking-widest"
+                    >
+                      <Play size={10} fill="currentColor" />
+                      Watch on YouTube
+                    </a>
                   </div>
                 </div>
               ) : (
@@ -155,10 +185,15 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                     alt={movie.title}
                     className="w-full h-full absolute inset-0 object-cover opacity-20 blur-sm"
                   />
-                  <Film size={48} className="text-white/10 mb-6 relative z-10" />
-                  <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-6 relative z-10">Trailer Vault Empty</p>
-                  <a 
-                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' trailer')}`}
+                  <Film
+                    size={48}
+                    className="text-white/10 mb-6 relative z-10"
+                  />
+                  <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em] mb-6 relative z-10">
+                    Trailer Vault Empty
+                  </p>
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " trailer")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="relative z-10 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-all flex items-center gap-2"
@@ -173,8 +208,11 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
             {/* Cinematic Details */}
             <div className="w-full flex-1 lg:w-[40%] p-6 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-dark-100 border-t lg:border-t-0 lg:border-l border-white/5">
               <div className="flex flex-wrap items-center gap-2 mb-6 sm:mb-8">
-                {details?.genres?.slice(0, 3).map(g => (
-                  <span key={g.id} className="px-3 py-1 rounded-md bg-accent/5 text-accent text-[9px] font-black uppercase tracking-widest border border-accent/10">
+                {details?.genres?.slice(0, 3).map((g) => (
+                  <span
+                    key={g.id}
+                    className="px-3 py-1 rounded-md bg-accent/5 text-accent text-[9px] font-black uppercase tracking-widest border border-accent/10"
+                  >
                     {g.name}
                   </span>
                 ))}
@@ -183,15 +221,23 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
               <h2 className="text-3xl lg:text-5xl font-black text-white mb-6 leading-[0.9] tracking-tighter">
                 {details?.title || movie.title}
               </h2>
-              
+
               <div className="flex items-center flex-wrap gap-4 sm:gap-6 text-gray-500 mb-8 sm:mb-12 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest">
                 <div className="flex items-center gap-2">
                   <Star size={14} className="text-yellow-500 fill-yellow-500" />
-                  <span className="text-white">{(details?.vote_average || movie.vote_average)?.toFixed(1)}</span>
+                  <span className="text-white">
+                    {(details?.vote_average || movie.vote_average)?.toFixed(1)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar size={14} />
-                  <span>{(details?.release_date || movie.release_date)?.split("-")[0]}</span>
+                  <span>
+                    {
+                      (details?.release_date || movie.release_date)?.split(
+                        "-",
+                      )[0]
+                    }
+                  </span>
                 </div>
                 {details?.runtime > 0 && (
                   <div className="flex items-center gap-2">
@@ -203,17 +249,22 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
 
               {/* Navigation Tabs */}
               <div className="flex overflow-x-auto hide-scrollbar border-b border-white/5 mb-8 sm:mb-10 gap-4 sm:gap-6 lg:gap-8">
-                {["overview", "cast", "recommended", "diary"].map((tab) => (
+                {["overview", "cast", "recommended", "notes"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`whitespace-nowrap pb-4 sm:pb-5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all relative ${
-                      activeTab === tab ? "text-accent" : "text-gray-600 hover:text-white"
+                      activeTab === tab
+                        ? "text-accent"
+                        : "text-gray-600 hover:text-white"
                     }`}
                   >
                     {tab}
                     {activeTab === tab && (
-                      <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-1 bg-accent shadow-[0_0_10px_#FF3D3D]" />
+                      <motion.div
+                        layoutId="tab-underline"
+                        className="absolute bottom-0 left-0 right-0 h-1 bg-accent shadow-[0_0_10px_#FF3D3D]"
+                      />
                     )}
                   </button>
                 ))}
@@ -223,9 +274,11 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                 {activeTab === "overview" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <p className="text-gray-400 leading-relaxed text-base mb-12 font-medium">
-                      {details?.overview || movie.overview || "Deep cinematic records for this title are currently restricted."}
+                      {details?.overview ||
+                        movie.overview ||
+                        "Deep cinematic records for this title are currently restricted."}
                     </p>
-                    
+
                     {isWatchlisted ? (
                       <button
                         onClick={() => onToggleWatchlist(movie.id)}
@@ -243,35 +296,47 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                         </button>
                         {folders && folders.length > 1 && (
                           <div className="relative">
-                            <button 
+                            <button
                               onClick={() => setShowDropdown(!showDropdown)}
                               className="h-full px-5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all rounded-2xl flex items-center justify-center text-white"
                             >
-                              <ChevronDown size={18} className={`transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
+                              <ChevronDown
+                                size={18}
+                                className={`transition-transform duration-300 ${showDropdown ? "rotate-180" : ""}`}
+                              />
                             </button>
-                            
+
                             <AnimatePresence>
                               {showDropdown && (
-                                <motion.div 
+                                <motion.div
                                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
                                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                   className="absolute bottom-full right-0 mb-3 w-48 bg-dark-100 border border-white/10 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 p-2"
                                 >
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 px-3 py-2 mb-1">Save to Folder</p>
-                                  {folders.filter(f => f.id !== "default").map(f => (
-                                    <button
-                                      key={f.id}
-                                      onClick={() => {
-                                        onToggleWatchlist(movie.id, f.id);
-                                        setShowDropdown(false);
-                                      }}
-                                      className="w-full text-left px-3 py-2.5 text-xs font-bold text-white hover:bg-accent/20 hover:text-accent rounded-xl transition-colors flex items-center gap-2 truncate"
-                                    >
-                                      <Folder size={14} className="shrink-0" />
-                                      <span className="truncate">{f.name}</span>
-                                    </button>
-                                  ))}
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 px-3 py-2 mb-1">
+                                    Save to Folder
+                                  </p>
+                                  {folders
+                                    .filter((f) => f.id !== "default")
+                                    .map((f) => (
+                                      <button
+                                        key={f.id}
+                                        onClick={() => {
+                                          onToggleWatchlist(movie.id, f.id);
+                                          setShowDropdown(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2.5 text-xs font-bold text-white hover:bg-accent/20 hover:text-accent rounded-xl transition-colors flex items-center gap-2 truncate"
+                                      >
+                                        <Folder
+                                          size={14}
+                                          className="shrink-0"
+                                        />
+                                        <span className="truncate">
+                                          {f.name}
+                                        </span>
+                                      </button>
+                                    ))}
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -283,63 +348,91 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                 )}
 
                 {activeTab === "cast" && (
-                  <motion.div 
-                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                     className="grid grid-cols-1 gap-4"
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="grid grid-cols-1 gap-4"
                   >
-                    {cast.length > 0 ? cast.map(person => (
-                      <a 
-                        key={person.id} 
-                        href={`https://www.themoviedb.org/person/${person.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-4 group p-2 rounded-2xl hover:bg-white/5 transition-all duration-300"
-                      >
-                        <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-white/5 group-hover:border-accent group-hover:shadow-[0_0_20px_rgba(171,139,255,0.4)] transition-all duration-500">
-                          <img 
-                            src={person.profile_path ? `https://image.tmdb.org/t/p/w185/${person.profile_path}` : "/no-movie.png"} 
-                            alt={person.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        </div>
-                        <div className="overflow-hidden">
-                          <p className="text-white text-[13px] font-bold truncate group-hover:text-accent transition-colors">{person.name}</p>
-                          <p className="text-gray-500 text-[10px] uppercase font-black truncate">{person.character || "Acting Personnel"}</p>
-                        </div>
-                      </a>
-                    )) : (
-                      <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest text-center col-span-full py-20">Cast Registry Missing</p>
+                    {cast.length > 0 ? (
+                      cast.map((person) => (
+                        <a
+                          key={person.id}
+                          href={`https://www.themoviedb.org/person/${person.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-4 group p-2 rounded-2xl hover:bg-white/5 transition-all duration-300"
+                        >
+                          <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-white/5 group-hover:border-accent group-hover:shadow-[0_0_20px_rgba(171,139,255,0.4)] transition-all duration-500">
+                            <img
+                              src={
+                                person.profile_path
+                                  ? `https://image.tmdb.org/t/p/w185/${person.profile_path}`
+                                  : "/no-movie.png"
+                              }
+                              alt={person.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
+                          </div>
+                          <div className="overflow-hidden">
+                            <p className="text-white text-[13px] font-bold truncate group-hover:text-accent transition-colors">
+                              {person.name}
+                            </p>
+                            <p className="text-gray-500 text-[10px] uppercase font-black truncate">
+                              {person.character || "Acting Personnel"}
+                            </p>
+                          </div>
+                        </a>
+                      ))
+                    ) : (
+                      <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest text-center col-span-full py-20">
+                        Cast Registry Missing
+                      </p>
                     )}
                   </motion.div>
                 )}
 
                 {activeTab === "recommended" && (
-                  <motion.div 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     className="grid grid-cols-3 gap-4"
                   >
-                    {similar.length > 0 ? similar.map(m => (
-                      <div key={m.id} className="group cursor-pointer">
-                        <div className="relative rounded-2xl overflow-hidden aspect-[2/3] border border-white/5 group-hover:border-accent/50 transition-colors duration-500">
-                           <img 
-                            src={m.poster_path ? `https://image.tmdb.org/t/p/w342/${m.poster_path}` : "/no-movie.png"} 
-                            alt={m.title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          />
+                    {similar.length > 0 ? (
+                      similar.map((m) => (
+                        <div key={m.id} className="group cursor-pointer">
+                          <div className="relative rounded-2xl overflow-hidden aspect-[2/3] border border-white/5 group-hover:border-accent/50 transition-colors duration-500">
+                            <img
+                              src={
+                                m.poster_path
+                                  ? `https://image.tmdb.org/t/p/w342/${m.poster_path}`
+                                  : "/no-movie.png"
+                              }
+                              alt={m.title}
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )) : (
-                      <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest text-center col-span-full py-20">No Related Signals</p>
+                      ))
+                    ) : (
+                      <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest text-center col-span-full py-20">
+                        No Related Signals
+                      </p>
                     )}
                   </motion.div>
                 )}
 
-                {activeTab === "diary" && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {activeTab === "notes" && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
                     {!userReview || isEditingReview ? (
                       <div className="bg-white/5 p-6 rounded-3xl border border-white/10 relative">
-                        <h3 className="text-white font-black uppercase tracking-widest text-xs mb-4">Rate & Review</h3>
-                        
+                        <h3 className="text-white font-black uppercase tracking-widest text-xs mb-4">
+                          Rate & Review
+                        </h3>
+
                         <div className="flex gap-2 mb-6">
                           {[1, 2, 3, 4, 5].map((star) => (
                             <button
@@ -349,25 +442,25 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                               onClick={() => setRating(star)}
                               className="focus:outline-none transition-transform hover:scale-110"
                             >
-                              <Star 
-                                size={28} 
+                              <Star
+                                size={28}
                                 className={`transition-colors ${
-                                  star <= (hoverRating || rating) 
-                                    ? "text-yellow-500 fill-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" 
+                                  star <= (hoverRating || rating)
+                                    ? "text-yellow-500 fill-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]"
                                     : "text-gray-600 hover:text-gray-500"
-                                }`} 
+                                }`}
                               />
                             </button>
                           ))}
                         </div>
-                        
+
                         <textarea
                           placeholder="Write your personal thoughts on this movie..."
                           value={reviewText}
                           onChange={(e) => setReviewText(e.target.value)}
                           className="w-full bg-black/50 border border-white/10 text-white rounded-2xl px-5 py-4 mb-6 focus:outline-none focus:border-accent transition-colors min-h-[120px] text-sm resize-none custom-scrollbar"
                         ></textarea>
-                        
+
                         <div className="flex gap-3">
                           {userReview && (
                             <button
@@ -378,15 +471,20 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                             </button>
                           )}
                           <button
-                            onClick={() => onSaveReview(movie.id, { rating, text: reviewText })}
+                            onClick={() =>
+                              onSaveReview(movie.id, {
+                                rating,
+                                text: reviewText,
+                              })
+                            }
                             disabled={rating === 0}
                             className={`flex-1 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                              rating === 0 
-                                ? "bg-white/5 text-gray-600 cursor-not-allowed" 
+                              rating === 0
+                                ? "bg-white/5 text-gray-600 cursor-not-allowed"
                                 : "bg-accent text-white shadow-[0_0_20px_rgba(255,61,61,0.2)] hover:bg-red-500 hover:scale-[1.02]"
                             }`}
                           >
-                            Save to Diary
+                            Save to Notes
                           </button>
                         </div>
                       </div>
@@ -394,18 +492,24 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                       <div className="bg-dark-100 p-6 sm:p-8 rounded-3xl border border-white/10 relative group shadow-xl">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 pb-6 border-b border-white/5">
                           <div>
-                            <h3 className="text-white font-black uppercase tracking-[0.2em] text-[10px] mb-2 sm:mb-3 text-accent">My Rating</h3>
+                            <h3 className="text-white font-black uppercase tracking-[0.2em] text-[10px] mb-2 sm:mb-3 text-accent">
+                              My Rating
+                            </h3>
                             <div className="flex gap-1.5">
                               {[1, 2, 3, 4, 5].map((star) => (
-                                <Star 
+                                <Star
                                   key={star}
-                                  size={22} 
-                                  className={star <= (userReview?.rating || 0) ? "text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]" : "text-white/5"} 
+                                  size={22}
+                                  className={
+                                    star <= (userReview?.rating || 0)
+                                      ? "text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]"
+                                      : "text-white/5"
+                                  }
                                 />
                               ))}
                             </div>
                           </div>
-                          
+
                           <div className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity w-full sm:w-auto">
                             <button
                               onClick={() => setIsEditingReview(true)}
@@ -421,14 +525,20 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                             </button>
                           </div>
                         </div>
-                        
+
                         {userReview?.text ? (
                           <div>
-                            <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[9px] mb-4">My Notes</h3>
-                            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-medium">{userReview.text}</p>
+                            <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[9px] mb-4">
+                              My Notes
+                            </h3>
+                            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                              {userReview.text}
+                            </p>
                           </div>
                         ) : (
-                          <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest italic">No notes written.</p>
+                          <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest italic">
+                            No notes written.
+                          </p>
                         )}
                       </div>
                     )}

@@ -13,8 +13,8 @@ CineTimez serves as a high-end demonstration of modern full-stack web developmen
 - **Intelligent Search & Filtering**: Real-time debounced movie searching, advanced sorting (Popularity, Release Date, Ratings), and dynamic genre filtering.
 - **Google OAuth Authentication**: Secure, one-click sign-in powered by Appwrite.
 - **Custom Library Management**: Create unlimited custom folders to categorize your saved movies (e.g., "Comfort Anime", "Weekend Thrillers").
-- **Personal Movie Diary**: Rate movies on a 5-star scale and write private personal reviews that sync securely to the cloud.
-- **Cinematic Details Modal**: A rich, responsive overlay featuring an embedded YouTube trailer player, cast registry, related recommendations, and your personal diary.
+- **Personal Movie Notes**: Rate movies on a 5-star scale and write private personal reviews that sync securely to the cloud.
+- **Cinematic Details Modal**: A rich, responsive overlay featuring an embedded YouTube trailer player, cast registry, related recommendations, and your personal notes.
 - **Trending Analytics**: A live "Trending Now" section that intelligently tracks popular search queries globally across the platform.
 - **Premium UI/UX**: A dark-themed, glassmorphic design featuring smooth staggered animations, interactive hover states, and seamless mobile responsiveness.
 
@@ -51,12 +51,12 @@ Manage your collection like a pro:
 - **Create Folders**: Click "+ New Folder" in your collection to create a custom category.
 - **Manage Folders**: Scroll through your folders using the premium invisible scrollbar. Click the 'X' on any custom folder to delete it (movies will safely remain in your "All Saved" default folder).
 
-### 5. Personal Diary & Reviews
+### 5. Personal Notes & Reviews
 
 Keep track of what you thought about every film:
 
-- **Rate & Review**: Open the "Diary" tab inside any movie's detail modal. Hover to select a 1-5 star rating and jot down your personal notes in the text area.
-- **Save to Cloud**: Click "Save to Diary" to lock in your review.
+- **Rate & Review**: Open the "Notes" tab inside any movie's detail modal. Hover to select a 1-5 star rating and jot down your personal notes in the text area.
+- **Save to Cloud**: Click "Save to Notes" to lock in your review.
 - **Manage Entries**: Your gold stars and notes will persist whenever you revisit the movie. Hover over your saved review to reveal "Edit" and "Delete" options.
 
 ---
@@ -82,9 +82,11 @@ Keep track of what you thought about every film:
 ---
 
 ## 🚀 Future Roadmap: Building a Cinema Community
-CineTimez is designed with scalability in mind. While it currently serves as a powerful personal movie discovery tool, it is perfectly architected to evolve into a full-scale **Cinema Community Platform**. 
+
+CineTimez is designed with scalability in mind. While it currently serves as a powerful personal movie discovery tool, it is perfectly architected to evolve into a full-scale **Cinema Community Platform**.
 
 Future development phases include:
+
 - **Public Review Feeds**: Transitioning from private user preferences to public Appwrite Database collections, allowing users to discover and interact with reviews from other movie enthusiasts.
 - **Social Interaction**: Implementing "Likes" and "Replies" for movie reviews, creating a social dialogue around cinema.
 - **Community Ratings**: Aggregating personal user ratings to create a "CineTimez Community Score" for every film, independent of official critic ratings.
@@ -118,6 +120,7 @@ Future development phases include:
 ---
 
 ## 📄 License
+
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
 ---
