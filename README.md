@@ -5,73 +5,92 @@
 ![CineTimez Hero Banner](./public/hero.png)
 
 ## ✨ Overview
-CineTimez serves as a high-end demonstration of modern web development capabilities. It seamlessly integrates the **TMDB API** for real-time movie data and **Appwrite** for intelligent search trend tracking. This project transition from a functional prototype to a production-ready foundation that can be expanded into a full-scale streaming or social movie platform.
+CineTimez serves as a high-end demonstration of modern full-stack web development capabilities. It seamlessly integrates the **TMDB API** for rich, real-time movie data and **Appwrite** for Backend-as-a-Service (BaaS) functionalities, including Google OAuth authentication, live search analytics, and secure cloud synchronization for personalized user data. 
 
 ### 🌟 Key Features
-- **Intelligent Search**: Real-time movie searching with debounced API requests to optimize performance.
-- **Dynamic Filtering**: Narrow down your search by genre (Action, Sci-Fi, Drama, etc.) with a single click.
-- **Advanced Sorting**: Organize results by Popularity, Release Date, or Critic Ratings.
-- **Personalized Watchlist**: Save your must-watch movies to a persistent "My List" using local storage integration.
-- **Trending Analytics**: A live "Trending Now" section powered by Appwrite that tracks popular search queries globally.
-- **Premium UI/UX**: A dark-themed, glassmorphic design featuring smooth staggered animations and responsive layouts for all device sizes.
+- **Intelligent Search & Filtering**: Real-time debounced movie searching, advanced sorting (Popularity, Release Date, Ratings), and dynamic genre filtering.
+- **Google OAuth Authentication**: Secure, one-click sign-in powered by Appwrite.
+- **Custom Library Management**: Create unlimited custom folders to categorize your saved movies (e.g., "Comfort Anime", "Weekend Thrillers").
+- **Personal Movie Diary**: Rate movies on a 5-star scale and write private personal reviews that sync securely to the cloud.
+- **Cinematic Details Modal**: A rich, responsive overlay featuring an embedded YouTube trailer player, cast registry, related recommendations, and your personal diary.
+- **Trending Analytics**: A live "Trending Now" section that intelligently tracks popular search queries globally across the platform.
+- **Premium UI/UX**: A dark-themed, glassmorphic design featuring smooth staggered animations, interactive hover states, and seamless mobile responsiveness.
 
 ---
 
-## 📖 User Guide
+## 📖 Detailed User Guide
 
-### 1. Finding Movies
-Use the **Search Bar** at the top to type in any movie title. Results will populate instantly as you type (with a subtle 500ms debounce to avoid API spam).
+### 1. Account Creation & Authentication
+- **Sign In**: Click the "Sign In with Google" button at the top right to instantly create an account. 
+- **Cloud Sync**: Once logged in, all your interactions (watchlists, folders, reviews) are securely synced to your Appwrite User Preferences. You can log out and log back in on any device, and your data will be right where you left it.
 
-### 2. Filtering & Sorting
-- Use the **Genre Pills** below the search bar to jump to specific categories.
-- Use the **Sort Dropdown** on the right of the "Explore" section to reorder movies based on your preference (e.g., "Newest" to see recent releases).
+### 2. Discovering Movies
+- **Search Bar**: Type any movie title. Results populate instantly with a 500ms debounce to prevent API spam.
+- **Genre Pills & Sorting**: Refine the catalog by clicking genre pills (Action, Sci-Fi, etc.) and use the sort dropdown to order by Release Date or Rating.
+- **Trending Now**: Check the top carousel to see what other CineTimez users are currently searching for.
 
-### 3. Managing Your Watchlist
-Look for the **Heart Icon** on any movie card. 
-- **Click to Add**: The heart turns solid red, and the movie is saved to your list.
-- **Click to Remove**: The movie is removed from your list instantly.
-- You can see your total saved count in the "Explore Catalog" header.
+### 3. Movie Details & Trailers
+Click on any movie card to open the **Cinematic Modal**:
+- **Overview**: Read the official synopsis and check runtime, genres, and release date.
+- **Cast**: View the primary cast registry with profile images and character names.
+- **Recommended**: Discover visually similar films dynamically recommended by the TMDB engine.
+- **Trailer Integration**: Watch the official YouTube trailer directly within the modal. (Automatically pauses when closed).
+
+### 4. Custom Folder Watchlist
+Gone are the days of a single massive watchlist. Manage your collection like a pro:
+- **Save a Movie**: Click the `+` icon on a movie card, or select a specific folder from the animated dropdown inside the Movie Details modal.
+- **View Collection**: Click "My Collection" in the navigation bar to toggle between the global catalog and your private library.
+- **Create Folders**: Click "+ New Folder" in your collection to create a custom category.
+- **Manage Folders**: Scroll through your folders using the premium invisible scrollbar. Click the 'X' on any custom folder to delete it (movies will safely remain in your "All Saved" default folder).
+
+### 5. Personal Diary & Reviews
+Keep track of what you thought about every film:
+- **Rate & Review**: Open the "Diary" tab inside any movie's detail modal. Hover to select a 1-5 star rating and jot down your personal notes in the text area.
+- **Save to Cloud**: Click "Save to Diary" to lock in your review. 
+- **Manage Entries**: Your gold stars and notes will persist whenever you revisit the movie. Hover over your saved review to reveal "Edit" and "Delete" options.
 
 ---
 
-## 🛠️ Technical Implementation
+## 🛠️ Technical Architecture
 
 ### Tech Stack
-- **Frontend**: React 19 (Functional Components & Hooks)
-- **Styling**: Tailwind CSS 4 (Theme-first architecture)
-- **Animations**: Framer Motion (Layout transitions & stagger effects)
-- **Backend/DB**: Appwrite (Global trend tracking)
+- **Frontend Core**: React 19 (Functional Components & Hooks)
+- **Styling**: Tailwind CSS 4 (Custom utilities, theme-first architecture)
+- **Animations**: Framer Motion (AnimatePresence, Layout transitions)
+- **Notifications**: Sonner (Premium, non-intrusive toast notifications)
+- **Backend/DB**: Appwrite (OAuth2, User Preferences, Document Storage)
 - **API**: The Movie Database (TMDB)
 
-### Production Readiness
-CineTimez is designed with a **scalability-first** approach:
-- **Error Boundaries**: Implemented to prevent app crashes during API downtime.
-- **SEO Optimized**: Fully configured with Open Graph meta tags and semantic HTML.
-- **Modular Components**: Highly reusable atomic components for easy expansion.
+### Engineering Highlights
+- **Optimistic UI Updates**: Watchlists and folders update instantly in the local state while silently syncing with the Appwrite cloud in the background, ensuring zero latency for the user.
+- **Asynchronous State Safety**: Implemented deep merging for Appwrite Preferences to prevent race conditions or data overwrites when rapidly updating folders and reviews.
+- **Adaptive Responsiveness**: The complex Movie Details modal uses adaptive flexbox modeling to lock scroll boundaries on mobile, ensuring the trailer and details sections scale flawlessly without breaking layout.
+- **Error Boundaries**: Comprehensive fallback UIs for failed API connections or missing trailer data.
 
 ---
 
-## 🚀 Potential for Expansion
-This website serves as a robust base for:
-- **User Authentication**: Implementing Appwrite Auth for cloud-synced accounts.
-- **Social Features**: Adding user reviews, ratings, and shared watchlists.
-- **Streaming Integration**: Connecting with VOD providers or official trailers via YouTube API.
-- **AI Recommendations**: Using movie data to generate personalized "For You" feeds.
+## 📥 Getting Started (Developer Setup)
 
----
-
-## 📥 Getting Started
-
-1.  **Clone the Repository**: `git clone [repo-url]`
-2.  **Install Dependencies**: `npm install`
-3.  **Environment Variables**: Create a `.env.local` file with:
+1.  **Clone the Repository**: 
+    ```bash
+    git clone https://github.com/nojanzzz/CineTimez.git
+    cd CineTimez
+    ```
+2.  **Install Dependencies**: 
+    ```bash
+    npm install
+    ```
+3.  **Environment Variables**: Create a `.env.local` file in the root directory:
     ```env
     VITE_TMDB_API_KEY=your_tmdb_bearer_token
     VITE_APPWRITE_PROJECT_ID=your_project_id
     VITE_APPWRITE_DATABASE_ID=your_db_id
     VITE_APPWRITE_COLLECTION_ID=your_collection_id
     ```
-4.  **Run Development Server**: `npm run dev`
+4.  **Run Development Server**: 
+    ```bash
+    npm run dev
+    ```
 
 ---
 

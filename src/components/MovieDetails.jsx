@@ -98,7 +98,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
         initial={{ scale: 0.9, y: 30, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, y: 30, opacity: 0 }}
-        className="bg-dark-100 border border-white/5 w-full max-w-6xl max-h-[90vh] rounded-[2rem] overflow-hidden shadow-[0_0_80px_rgba(255,61,61,0.15)] relative flex flex-col lg:flex-row"
+        className="bg-dark-100 border border-white/5 w-full max-w-6xl h-[90vh] lg:h-auto lg:max-h-[90vh] rounded-[2rem] overflow-hidden shadow-[0_0_80px_rgba(255,61,61,0.15)] relative flex flex-col lg:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -123,7 +123,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
         ) : (
           <>
             {/* Media Canvas */}
-            <div className="w-full lg:w-[60%] relative h-[300px] lg:h-auto bg-black flex items-center justify-center group">
+            <div className="w-full lg:w-[60%] relative shrink-0 h-[220px] xs:h-[250px] sm:h-[300px] lg:h-auto bg-black flex items-center justify-center group">
               {trailer ? (
                 <div className="w-full h-full relative">
                   <iframe
@@ -171,8 +171,8 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
             </div>
 
             {/* Cinematic Details */}
-            <div className="w-full lg:w-[40%] p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-dark-100 border-l border-white/5">
-              <div className="flex flex-wrap items-center gap-2 mb-8">
+            <div className="w-full flex-1 lg:w-[40%] p-6 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-dark-100 border-t lg:border-t-0 lg:border-l border-white/5">
+              <div className="flex flex-wrap items-center gap-2 mb-6 sm:mb-8">
                 {details?.genres?.slice(0, 3).map(g => (
                   <span key={g.id} className="px-3 py-1 rounded-md bg-accent/5 text-accent text-[9px] font-black uppercase tracking-widest border border-accent/10">
                     {g.name}
@@ -184,7 +184,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                 {details?.title || movie.title}
               </h2>
               
-              <div className="flex items-center gap-6 text-gray-500 mb-12 text-[11px] font-bold uppercase tracking-widest">
+              <div className="flex items-center flex-wrap gap-4 sm:gap-6 text-gray-500 mb-8 sm:mb-12 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest">
                 <div className="flex items-center gap-2">
                   <Star size={14} className="text-yellow-500 fill-yellow-500" />
                   <span className="text-white">{(details?.vote_average || movie.vote_average)?.toFixed(1)}</span>
@@ -202,12 +202,12 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
               </div>
 
               {/* Navigation Tabs */}
-              <div className="flex border-b border-white/5 mb-10 gap-10">
+              <div className="flex overflow-x-auto hide-scrollbar border-b border-white/5 mb-8 sm:mb-10 gap-4 sm:gap-6 lg:gap-8">
                 {["overview", "cast", "recommended", "diary"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`pb-5 text-[10px] font-black uppercase tracking-[0.25em] transition-all relative ${
+                    className={`whitespace-nowrap pb-4 sm:pb-5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all relative ${
                       activeTab === tab ? "text-accent" : "text-gray-600 hover:text-white"
                     }`}
                   >
@@ -391,10 +391,10 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-dark-100 p-8 rounded-3xl border border-white/10 relative group shadow-xl">
-                        <div className="flex justify-between items-start mb-8 pb-6 border-b border-white/5">
+                      <div className="bg-dark-100 p-6 sm:p-8 rounded-3xl border border-white/10 relative group shadow-xl">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 pb-6 border-b border-white/5">
                           <div>
-                            <h3 className="text-white font-black uppercase tracking-[0.2em] text-[10px] mb-3 text-accent">My Rating</h3>
+                            <h3 className="text-white font-black uppercase tracking-[0.2em] text-[10px] mb-2 sm:mb-3 text-accent">My Rating</h3>
                             <div className="flex gap-1.5">
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <Star 
@@ -406,16 +406,16 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                             </div>
                           </div>
                           
-                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity w-full sm:w-auto">
                             <button
                               onClick={() => setIsEditingReview(true)}
-                              className="px-4 py-2 bg-white/10 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-white/20 transition-colors"
+                              className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-white/10 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-white/20 transition-colors"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => onDeleteReview(movie.id)}
-                              className="px-4 py-2 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-red-500 hover:text-white transition-colors"
+                              className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-red-500 hover:text-white transition-colors"
                             >
                               Delete
                             </button>

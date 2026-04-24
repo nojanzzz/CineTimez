@@ -10,7 +10,7 @@ import MovieSkeleton, { TrendingSkeleton } from "./components/Skeleton";
 import { useDebounce } from "react-use";
 import { getTrendingMovies, updateSearchCount, account, OAuthProvider } from "./appwrite";
 import { Bookmark, LayoutGrid, TrendingUp, Sparkles, FolderPlus, Folder, X } from "lucide-react";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -52,12 +52,21 @@ const App = () => {
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
 
+  const updateAppwritePrefs = async (newPrefs) => {
+    try {
+      const currentPrefs = await account.getPrefs();
+      await account.updatePrefs({ ...currentPrefs, ...newPrefs });
+    } catch (err) {
+      console.error("Failed to update prefs:", err);
+    }
+  };
+
   const deleteFolder = (folderId, folderName, e) => {
     e.stopPropagation();
     toast("Folder deleted", { icon: '🗑️' });
     setFolders(prev => {
       const updated = prev.filter(f => f.id !== folderId);
-      account.updatePrefs({ folders: updated, watchlist: Array.from(new Set(updated.flatMap(f => f.movies))) });
+      updateAppwritePrefs({ folders: updated, watchlist: Array.from(new Set(updated.flatMap(f => f.movies))) });
       if (activeFolderId === folderId) setActiveFolderId("default");
       return updated;
     });
@@ -70,7 +79,7 @@ const App = () => {
     const newFolders = [...folders, newFolder];
     setFolders(newFolders);
     setActiveFolderId(newFolder.id);
-    account.updatePrefs({ folders: newFolders, watchlist: Array.from(new Set(newFolders.flatMap(f => f.movies))) });
+    updateAppwritePrefs({ folders: newFolders, watchlist: Array.from(new Set(newFolders.flatMap(f => f.movies))) });
     toast.success(`Folder "${newFolderName.trim()}" created`);
     setShowNewFolderModal(false);
     setNewFolderName("");
@@ -189,7 +198,7 @@ const App = () => {
     toast.success("Review saved!");
     setReviews(prev => {
       const newReviews = { ...prev, [movieId]: reviewData };
-      account.updatePrefs({ reviews: newReviews }).catch(err => console.error("Failed to sync review:", err));
+      updateAppwritePrefs({ reviews: newReviews });
       return newReviews;
     });
   };
@@ -199,7 +208,7 @@ const App = () => {
     setReviews(prev => {
       const newReviews = { ...prev };
       delete newReviews[movieId];
-      account.updatePrefs({ reviews: newReviews }).catch(err => console.error("Failed to delete review:", err));
+      updateAppwritePrefs({ reviews: newReviews });
       return newReviews;
     });
   };
@@ -235,9 +244,7 @@ const App = () => {
         );
       }
       
-      account.updatePrefs({ folders: updatedFolders, watchlist: Array.from(new Set(updatedFolders.flatMap(f => f.movies))) }).catch(err => {
-        console.error("Failed to sync watchlist with Appwrite:", err);
-      });
+      updateAppwritePrefs({ folders: updatedFolders, watchlist: Array.from(new Set(updatedFolders.flatMap(f => f.movies))) });
       
       return updatedFolders;
     });
@@ -292,7 +299,6 @@ const App = () => {
 
   return (
     <main className="overflow-x-hidden">
-      <Toaster theme="dark" position="bottom-right" toastOptions={{ style: { background: '#111', border: '1px solid #333', color: '#fff' } }} />
       <CyberBackground />
       
       <div className="wrapper">
