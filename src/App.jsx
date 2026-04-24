@@ -9,7 +9,7 @@ import CyberBackground from "./components/CyberBackground";
 import MovieSkeleton, { TrendingSkeleton } from "./components/Skeleton";
 import { useDebounce } from "react-use";
 import { getTrendingMovies, updateSearchCount, account, OAuthProvider } from "./appwrite";
-import { Bookmark, LayoutGrid, TrendingUp, Sparkles, FolderPlus, Folder } from "lucide-react";
+import { Bookmark, LayoutGrid, TrendingUp, Sparkles, FolderPlus, Folder, X } from "lucide-react";
 import { Toaster, toast } from "sonner";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
@@ -46,6 +46,35 @@ const App = () => {
   const [watchlistMovies, setWatchlistMovies] = useState([]);
   const [isFetchingWatchlist, setIsFetchingWatchlist] = useState(false);
   const [user, setUser] = useState(null);
+  const [reviews, setReviews] = useState({});
+  
+  // Modal States
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const deleteFolder = (folderId, folderName, e) => {
+    e.stopPropagation();
+    toast("Folder deleted", { icon: '🗑️' });
+    setFolders(prev => {
+      const updated = prev.filter(f => f.id !== folderId);
+      account.updatePrefs({ folders: updated, watchlist: Array.from(new Set(updated.flatMap(f => f.movies))) });
+      if (activeFolderId === folderId) setActiveFolderId("default");
+      return updated;
+    });
+  };
+
+  const createFolder = (e) => {
+    e.preventDefault();
+    if (newFolderName.trim() === "") return;
+    const newFolder = { id: Date.now().toString(), name: newFolderName.trim(), movies: [] };
+    const newFolders = [...folders, newFolder];
+    setFolders(newFolders);
+    setActiveFolderId(newFolder.id);
+    account.updatePrefs({ folders: newFolders, watchlist: Array.from(new Set(newFolders.flatMap(f => f.movies))) });
+    toast.success(`Folder "${newFolderName.trim()}" created`);
+    setShowNewFolderModal(false);
+    setNewFolderName("");
+  };
 
   useEffect(() => {
     const checkUser = async () => {
@@ -58,9 +87,13 @@ const App = () => {
         } else if (prefs.watchlist) {
           setFolders([{ id: "default", name: "All Saved", movies: prefs.watchlist }]);
         }
+        if (prefs.reviews) {
+          setReviews(prefs.reviews);
+        }
       } catch {
         setUser(null);
         setFolders([{ id: "default", name: "All Saved", movies: [] }]);
+        setReviews({});
         setShowWatchlist(false);
       }
     };
@@ -76,6 +109,7 @@ const App = () => {
       await account.deleteSession("current");
       setUser(null);
       setFolders([{ id: "default", name: "All Saved", movies: [] }]);
+      setReviews({});
       toast("Successfully logged out");
     } catch (err) {
       console.error("Logout failed", err);
@@ -147,29 +181,58 @@ const App = () => {
     }
   };
 
+  const saveReview = (movieId, reviewData) => {
+    if (!user) {
+      loginWithGoogle();
+      return;
+    }
+    toast.success("Review saved!");
+    setReviews(prev => {
+      const newReviews = { ...prev, [movieId]: reviewData };
+      account.updatePrefs({ reviews: newReviews }).catch(err => console.error("Failed to sync review:", err));
+      return newReviews;
+    });
+  };
+
+  const deleteReview = (movieId) => {
+    toast("Review removed", { icon: '🗑️' });
+    setReviews(prev => {
+      const newReviews = { ...prev };
+      delete newReviews[movieId];
+      account.updatePrefs({ reviews: newReviews }).catch(err => console.error("Failed to delete review:", err));
+      return newReviews;
+    });
+  };
+
   const toggleWatchlist = (movieId, targetFolderId = "default") => {
     if (!user) {
       loginWithGoogle();
       return;
     }
 
+    const folderToAdd = targetFolderId !== "default" ? targetFolderId : (showWatchlist ? activeFolderId : "default");
+    const isWatchlisted = folders.some(f => f.movies.includes(movieId));
+
+    if (isWatchlisted) {
+      toast("Removed from Library", { icon: '🗑️' });
+    } else {
+      const folderName = folders.find(f => f.id === folderToAdd)?.name || "All Saved";
+      toast.success(`Archived to ${folderName}`);
+    }
+
     setFolders(prevFolders => {
-      const isWatchlisted = prevFolders.some(f => f.movies.includes(movieId));
+      const currentlyWatchlisted = prevFolders.some(f => f.movies.includes(movieId));
       
       let updatedFolders;
-      if (isWatchlisted) {
+      if (currentlyWatchlisted) {
         updatedFolders = prevFolders.map(f => ({
           ...f,
           movies: f.movies.filter(id => id !== movieId)
         }));
-        toast("Removed from Library", { icon: '🗑️' });
       } else {
-        const folderToAdd = showWatchlist ? activeFolderId : targetFolderId;
         updatedFolders = prevFolders.map(f => 
           f.id === folderToAdd ? { ...f, movies: [...f.movies, movieId] } : f
         );
-        const folderName = prevFolders.find(f => f.id === folderToAdd)?.name || "All Saved";
-        toast.success(`Archived to ${folderName}`);
       }
       
       account.updatePrefs({ folders: updatedFolders, watchlist: Array.from(new Set(updatedFolders.flatMap(f => f.movies))) }).catch(err => {
@@ -371,21 +434,20 @@ const App = () => {
                     <Folder size={14} className={activeFolderId === folder.id ? 'fill-white/20' : ''} />
                     {folder.name}
                     <span className="bg-black/30 px-2 py-0.5 rounded-md text-[10px] ml-1">{folder.movies.length}</span>
+                    
+                    {folder.id !== "default" && (
+                      <div 
+                        onClick={(e) => deleteFolder(folder.id, folder.name, e)}
+                        className="ml-2 p-1 rounded-full hover:bg-red-500/20 text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <X size={12} />
+                      </div>
+                    )}
                   </button>
                 ))}
                 
                 <button
-                  onClick={() => {
-                    const name = prompt("Enter new folder name (e.g. Comfort Anime):");
-                    if (name && name.trim() !== "") {
-                      const newFolder = { id: Date.now().toString(), name: name.trim(), movies: [] };
-                      const newFolders = [...folders, newFolder];
-                      setFolders(newFolders);
-                      setActiveFolderId(newFolder.id);
-                      account.updatePrefs({ folders: newFolders, watchlist: Array.from(new Set(newFolders.flatMap(f => f.movies))) });
-                      toast.success(`Folder "${name}" created`);
-                    }
-                  }}
+                  onClick={() => setShowNewFolderModal(true)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-dashed border-white/20 text-gray-400 hover:text-white hover:border-white/40 transition-colors whitespace-nowrap text-xs font-bold uppercase tracking-widest"
                 >
                   <FolderPlus size={14} />
@@ -497,7 +559,61 @@ const App = () => {
             isWatchlisted={watchlist.includes(selectedMovie.id)}
             onToggleWatchlist={toggleWatchlist}
             folders={folders}
+            userReview={reviews[selectedMovie.id]}
+            onSaveReview={saveReview}
+            onDeleteReview={deleteReview}
           />
+        )}
+      </AnimatePresence>
+      
+      {/* Folder Creation Modal */}
+      <AnimatePresence>
+        {showNewFolderModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowNewFolderModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-dark-100 border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_40px_rgba(0,0,0,0.5)]"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="text-white font-bold text-xl mb-2">Create New Folder</h3>
+              <p className="text-gray-400 text-sm mb-6">Organize your movies perfectly.</p>
+              
+              <form onSubmit={createFolder}>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="e.g. Comfort Anime"
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  className="w-full bg-black/50 border border-white/10 text-white rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-accent transition-colors"
+                />
+                
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewFolderModal(false)}
+                    className="flex-1 py-3 rounded-xl text-gray-400 font-bold hover:bg-white/5 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 rounded-xl bg-accent text-white font-bold hover:bg-red-500 transition-colors text-sm shadow-[0_0_20px_rgba(255,61,61,0.2)]"
+                  >
+                    Create
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
       

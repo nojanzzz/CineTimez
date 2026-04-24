@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Play, Star, Calendar, Globe, Users, Film } from "lucide-react";
+import { X, Play, Star, Calendar, Globe, Users, Film, ChevronDown, Folder } from "lucide-react";
 import ReactPlayer from "react-player";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
@@ -13,7 +13,7 @@ const API_OPTIONS = {
   },
 };
 
-const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folders }) => {
+const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folders, userReview, onSaveReview, onDeleteReview }) => {
   const [details, setDetails] = useState(null);
   const [cast, setCast] = useState([]);
   const [trailer, setTrailer] = useState(null);
@@ -21,6 +21,25 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [showDropdown, setShowDropdown] = useState(false);
+  
+  // Diary States
+  const [isEditingReview, setIsEditingReview] = useState(!userReview);
+  const [rating, setRating] = useState(userReview?.rating || 0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewText, setReviewText] = useState(userReview?.text || "");
+
+  useEffect(() => {
+    if (userReview) {
+      setRating(userReview.rating);
+      setReviewText(userReview.text);
+      setIsEditingReview(false);
+    } else {
+      setRating(0);
+      setReviewText("");
+      setIsEditingReview(true);
+    }
+  }, [userReview, movie]);
 
   useEffect(() => {
     if (!movie) return;
@@ -184,7 +203,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
 
               {/* Navigation Tabs */}
               <div className="flex border-b border-white/5 mb-10 gap-10">
-                {["overview", "cast", "recommended"].map((tab) => (
+                {["overview", "cast", "recommended", "diary"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -215,7 +234,7 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                         Discard from Library
                       </button>
                     ) : (
-                      <div className="flex gap-2 w-full">
+                      <div className="flex gap-2 w-full relative">
                         <button
                           onClick={() => onToggleWatchlist(movie.id)}
                           className="flex-1 flex items-center justify-center gap-4 py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(255,255,255,0.1)]"
@@ -223,20 +242,40 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                           Archive to My List
                         </button>
                         {folders && folders.length > 1 && (
-                          <select 
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                onToggleWatchlist(movie.id, e.target.value);
-                                e.target.value = ""; 
-                              }
-                            }}
-                            className="bg-white/10 text-white font-bold text-xs uppercase tracking-widest rounded-2xl px-4 cursor-pointer outline-none border border-white/5 hover:bg-white/20 transition-all text-center"
-                          >
-                            <option value="" className="bg-dark-100">+ Folder</option>
-                            {folders.filter(f => f.id !== "default").map(f => (
-                              <option key={f.id} value={f.id} className="bg-dark-100">{f.name}</option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <button 
+                              onClick={() => setShowDropdown(!showDropdown)}
+                              className="h-full px-5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all rounded-2xl flex items-center justify-center text-white"
+                            >
+                              <ChevronDown size={18} className={`transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            <AnimatePresence>
+                              {showDropdown && (
+                                <motion.div 
+                                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                  className="absolute bottom-full right-0 mb-3 w-48 bg-dark-100 border border-white/10 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 p-2"
+                                >
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 px-3 py-2 mb-1">Save to Folder</p>
+                                  {folders.filter(f => f.id !== "default").map(f => (
+                                    <button
+                                      key={f.id}
+                                      onClick={() => {
+                                        onToggleWatchlist(movie.id, f.id);
+                                        setShowDropdown(false);
+                                      }}
+                                      className="w-full text-left px-3 py-2.5 text-xs font-bold text-white hover:bg-accent/20 hover:text-accent rounded-xl transition-colors flex items-center gap-2 truncate"
+                                    >
+                                      <Folder size={14} className="shrink-0" />
+                                      <span className="truncate">{f.name}</span>
+                                    </button>
+                                  ))}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
                         )}
                       </div>
                     )}
@@ -291,6 +330,107 @@ const MovieDetails = ({ movie, onClose, onToggleWatchlist, isWatchlisted, folder
                       </div>
                     )) : (
                       <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest text-center col-span-full py-20">No Related Signals</p>
+                    )}
+                  </motion.div>
+                )}
+
+                {activeTab === "diary" && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    {!userReview || isEditingReview ? (
+                      <div className="bg-white/5 p-6 rounded-3xl border border-white/10 relative">
+                        <h3 className="text-white font-black uppercase tracking-widest text-xs mb-4">Rate & Review</h3>
+                        
+                        <div className="flex gap-2 mb-6">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onMouseEnter={() => setHoverRating(star)}
+                              onMouseLeave={() => setHoverRating(0)}
+                              onClick={() => setRating(star)}
+                              className="focus:outline-none transition-transform hover:scale-110"
+                            >
+                              <Star 
+                                size={28} 
+                                className={`transition-colors ${
+                                  star <= (hoverRating || rating) 
+                                    ? "text-yellow-500 fill-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" 
+                                    : "text-gray-600 hover:text-gray-500"
+                                }`} 
+                              />
+                            </button>
+                          ))}
+                        </div>
+                        
+                        <textarea
+                          placeholder="Write your personal thoughts on this movie..."
+                          value={reviewText}
+                          onChange={(e) => setReviewText(e.target.value)}
+                          className="w-full bg-black/50 border border-white/10 text-white rounded-2xl px-5 py-4 mb-6 focus:outline-none focus:border-accent transition-colors min-h-[120px] text-sm resize-none custom-scrollbar"
+                        ></textarea>
+                        
+                        <div className="flex gap-3">
+                          {userReview && (
+                            <button
+                              onClick={() => setIsEditingReview(false)}
+                              className="px-6 py-3 rounded-2xl text-gray-400 font-bold hover:bg-white/5 transition-colors text-xs uppercase tracking-widest border border-transparent hover:border-white/10"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onSaveReview(movie.id, { rating, text: reviewText })}
+                            disabled={rating === 0}
+                            className={`flex-1 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                              rating === 0 
+                                ? "bg-white/5 text-gray-600 cursor-not-allowed" 
+                                : "bg-accent text-white shadow-[0_0_20px_rgba(255,61,61,0.2)] hover:bg-red-500 hover:scale-[1.02]"
+                            }`}
+                          >
+                            Save to Diary
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-dark-100 p-8 rounded-3xl border border-white/10 relative group shadow-xl">
+                        <div className="flex justify-between items-start mb-8 pb-6 border-b border-white/5">
+                          <div>
+                            <h3 className="text-white font-black uppercase tracking-[0.2em] text-[10px] mb-3 text-accent">My Rating</h3>
+                            <div className="flex gap-1.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star 
+                                  key={star}
+                                  size={22} 
+                                  className={star <= (userReview?.rating || 0) ? "text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]" : "text-white/5"} 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => setIsEditingReview(true)}
+                              className="px-4 py-2 bg-white/10 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-white/20 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => onDeleteReview(movie.id)}
+                              className="px-4 py-2 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-red-500 hover:text-white transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {userReview?.text ? (
+                          <div>
+                            <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[9px] mb-4">My Notes</h3>
+                            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-medium">{userReview.text}</p>
+                          </div>
+                        ) : (
+                          <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest italic">No notes written.</p>
+                        )}
+                      </div>
                     )}
                   </motion.div>
                 )}
