@@ -12,7 +12,7 @@ CineTimez serves as a high-end demonstration of modern full-stack web developmen
 
 - **Intelligent Search & Filtering**: Real-time debounced movie searching, advanced sorting (Popularity, Release Date, Ratings), and dynamic genre filtering.
 - **Google OAuth Authentication**: Secure, one-click sign-in powered by Appwrite.
-- **Custom Library Management**: Create unlimited custom folders to categorize your saved movies (e.g., "Comfort Anime", "Weekend Thrillers").
+- **Custom Library Management**: Create unlimited custom folders to categorize your saved movies (e.g., "Comfort Movies", "Weekend Thrillers").
 - **Personal Movie Notes**: Rate movies on a 5-star scale and write private personal reviews that sync securely to the cloud.
 - **Cinematic Details Modal**: A rich, responsive overlay featuring an embedded YouTube trailer player, cast registry, related recommendations, and your personal notes.
 - **Trending Analytics**: A live "Trending Now" section that intelligently tracks popular search queries globally across the platform.
@@ -65,7 +65,8 @@ Keep track of what you thought about every film:
 
 ### Tech Stack
 
-- **Frontend Core**: React 19 (Functional Components & Hooks)
+- **Frontend Core**: React 19 (Functional Components & Custom Hooks)
+- **State Management**: React Context API (Global State Architecture)
 - **Styling**: Tailwind CSS 4 (Custom utilities, theme-first architecture)
 - **Animations**: Framer Motion (AnimatePresence, Layout transitions)
 - **Notifications**: Sonner (Premium, non-intrusive toast notifications)
@@ -74,6 +75,8 @@ Keep track of what you thought about every film:
 
 ### Engineering Highlights
 
+- **Modular Architecture**: Clean code structure with business logic extracted into custom hooks (`useMovies`, `useWatchlist`, `useAuth`), ensuring the codebase is scalable and easy to maintain.
+- **Context-Driven State**: Eliminated prop drilling by implementing a centralized `AppProvider`, allowing components to access global movie data and user preferences seamlessly.
 - **Optimistic UI Updates**: Watchlists and folders update instantly in the local state while silently syncing with the Appwrite cloud in the background, ensuring zero latency for the user.
 - **Asynchronous State Safety**: Implemented deep merging for Appwrite Preferences to prevent race conditions or data overwrites when rapidly updating folders and reviews.
 - **Adaptive Responsiveness**: The complex Movie Details modal uses adaptive flexbox modeling to lock scroll boundaries on mobile, ensuring the trailer and details sections scale flawlessly without breaking layout.
@@ -125,4 +128,10 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 
-_CineTimez — Redefining how you discover cinema._
+## 🧑‍💻 Author
+
+**Naufal Auzan R**
+Computer Engineering, Vocational School IPB University
+[Portfolio](https://port-jan.vercel.app/) | [LinkedIn](https://www.linkedin.com/in/naufalauzanr/)
+
+---

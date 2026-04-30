@@ -1,8 +1,10 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Heart, Star } from "lucide-react";
+import { useAppContext } from "../context/AppContext";
 
-const MovieCard = ({ movie, isWatchlisted, onToggleWatchlist, onClick }) => {
+const MovieCard = ({ movie, isWatchlisted }) => {
+  const { toggleWatchlist, setSelectedMovie } = useAppContext();
   const {
     id,
     title,
@@ -11,6 +13,7 @@ const MovieCard = ({ movie, isWatchlisted, onToggleWatchlist, onClick }) => {
     release_date,
     original_language,
   } = movie;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -18,7 +21,7 @@ const MovieCard = ({ movie, isWatchlisted, onToggleWatchlist, onClick }) => {
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -8, scale: 1.02 }}
       className="movie-card group relative cursor-pointer z-10 hover:z-20"
-      onClick={() => onClick(movie)}
+      onClick={() => setSelectedMovie(movie)}
     >
       <div className="relative overflow-hidden rounded-2xl border border-white/5 group-hover:border-accent/30 transition-all duration-500 shadow-2xl group-hover:shadow-accent/10">
         <img
@@ -49,7 +52,7 @@ const MovieCard = ({ movie, isWatchlisted, onToggleWatchlist, onClick }) => {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onToggleWatchlist(id);
+            toggleWatchlist(id);
           }}
           className={`absolute top-4 right-4 p-2.5 rounded-full backdrop-blur-xl border transition-all duration-300 z-30 ${
             isWatchlisted

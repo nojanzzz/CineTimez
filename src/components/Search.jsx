@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Search as SearchIcon, X, Clock, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppContext } from "../context/AppContext";
 
-const Search = ({ searchTerm, setSearchTerm }) => {
+const Search = () => {
+  const { searchTerm, setSearchTerm } = useAppContext();
   const [history, setHistory] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -100,4 +102,3 @@ const Search = ({ searchTerm, setSearchTerm }) => {
 };
 
 export default Search;
-

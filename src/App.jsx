@@ -1,368 +1,75 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Search from "./components/Search";
-import Spinner from "./components/Spinner";
 import MovieCard from "./components/MovieCard";
 import Filters from "./components/Filters";
 import MovieDetails from "./components/MovieDetails";
 import CyberBackground from "./components/CyberBackground";
-import MovieSkeleton, { TrendingSkeleton } from "./components/Skeleton";
-import { useDebounce } from "react-use";
-import {
-  getTrendingMovies,
-  updateSearchCount,
-  account,
-  OAuthProvider,
-} from "./appwrite";
+import MovieSkeleton from "./components/Skeleton";
+import { useAppContext } from "./context/AppContext";
 import {
   Bookmark,
   LayoutGrid,
   TrendingUp,
-  Sparkles,
   FolderPlus,
   Folder,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
-
-const API_BASE_URL = "https://api.themoviedb.org/3";
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-const API_OPTIONS = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization: `Bearer ${API_KEY}`,
-  },
-};
 
 const App = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [contentType, setContentType] = useState("movie");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [movieList, setMovieList] = useState([]);
-  const [trendingMovies, setTrendingMovies] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const {
+    user,
+    logout,
+    loginWithGoogle,
+    searchTerm,
+    setSearchTerm,
+    movieList,
+    trendingMovies,
+    isLoading,
+    isFetchingMore,
+    errorMessage,
+    setPage,
+    hasMore,
+    fetchMovies,
+    debouncedSearchTerm,
+    selectedMovie,
+    setSelectedMovie,
+    folders,
+    activeFolderId,
+    setActiveFolderId,
+    watchlist,
+    showWatchlist,
+    setShowWatchlist,
+    watchlistMovies,
+    isFetchingWatchlist,
+    createFolder,
+    deleteFolder,
+    setSelectedGenre,
+  } = useAppContext();
 
-  // New States
-  const [selectedGenre, setSelectedGenre] = useState(0);
-  const [selectedLanguage, setSelectedLanguage] = useState("");
-  const [sortBy, setSortBy] = useState("popularity.desc");
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [selectedMovie, setSelectedMovie] = useState(null);
-  const [folders, setFolders] = useState([
-    { id: "default", name: "All Saved", movies: [] },
-  ]);
-  const [activeFolderId, setActiveFolderId] = useState("default");
-  const watchlist = folders.flatMap((f) => f.movies);
-  const [showWatchlist, setShowWatchlist] = useState(false);
-  const [watchlistMovies, setWatchlistMovies] = useState([]);
-  const [isFetchingWatchlist, setIsFetchingWatchlist] = useState(false);
-  const [user, setUser] = useState(null);
-  const [reviews, setReviews] = useState({});
-
-  // Modal States
+  // Local Modal States
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
 
-  const updateAppwritePrefs = async (newPrefs) => {
-    try {
-      const currentPrefs = await account.getPrefs();
-      await account.updatePrefs({ ...currentPrefs, ...newPrefs });
-    } catch (err) {
-      console.error("Failed to update prefs:", err);
-    }
-  };
-
-  const deleteFolder = (folderId, folderName, e) => {
-    e.stopPropagation();
-    toast("Folder deleted", { icon: "🗑️" });
-    setFolders((prev) => {
-      const updated = prev.filter((f) => f.id !== folderId);
-      updateAppwritePrefs({
-        folders: updated,
-        watchlist: Array.from(new Set(updated.flatMap((f) => f.movies))),
-      });
-      if (activeFolderId === folderId) setActiveFolderId("default");
-      return updated;
+  const observer = useRef();
+  const lastMovieElementRef = (node) => {
+    if (isLoading || isFetchingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage((prev) => prev + 1);
+      }
     });
+    if (node) observer.current.observe(node);
   };
 
-  const createFolder = (e) => {
+  const handleCreateFolder = (e) => {
     e.preventDefault();
     if (newFolderName.trim() === "") return;
-    const newFolder = {
-      id: Date.now().toString(),
-      name: newFolderName.trim(),
-      movies: [],
-    };
-    const newFolders = [...folders, newFolder];
-    setFolders(newFolders);
-    setActiveFolderId(newFolder.id);
-    updateAppwritePrefs({
-      folders: newFolders,
-      watchlist: Array.from(new Set(newFolders.flatMap((f) => f.movies))),
-    });
-    toast.success(`Folder "${newFolderName.trim()}" created`);
+    createFolder(newFolderName);
     setShowNewFolderModal(false);
     setNewFolderName("");
   };
-
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const loggedInUser = await account.get();
-        setUser(loggedInUser);
-        const prefs = await account.getPrefs();
-        if (prefs.folders) {
-          setFolders(prefs.folders);
-        } else if (prefs.watchlist) {
-          setFolders([
-            { id: "default", name: "All Saved", movies: prefs.watchlist },
-          ]);
-        }
-        if (prefs.reviews) {
-          setReviews(prefs.reviews);
-        }
-      } catch {
-        setUser(null);
-        setFolders([{ id: "default", name: "All Saved", movies: [] }]);
-        setReviews({});
-        setShowWatchlist(false);
-      }
-    };
-    checkUser();
-  }, []);
-
-  const loginWithGoogle = () => {
-    account.createOAuth2Session(
-      OAuthProvider.Google,
-      window.location.origin,
-      window.location.origin,
-    );
-  };
-
-  const logout = async () => {
-    try {
-      await account.deleteSession("current");
-      setUser(null);
-      setFolders([{ id: "default", name: "All Saved", movies: [] }]);
-      setReviews({});
-      toast("Successfully logged out");
-    } catch (err) {
-      console.error("Logout failed", err);
-    }
-  };
-
-  const observer = useRef();
-  const lastMovieElementRef = useCallback(
-    (node) => {
-      if (isLoading || isFetchingMore) return;
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          setPage((prev) => prev + 1);
-        }
-      });
-      if (node) observer.current.observe(node);
-    },
-    [isLoading, isFetchingMore, hasMore],
-  );
-
-  useDebounce(
-    () => {
-      setDebouncedSearchTerm(searchTerm);
-    },
-    500,
-    [searchTerm],
-  );
-
-  const fetchMovies = useCallback(
-    async (query = "", pageNum = 1) => {
-      if (pageNum === 1) setIsLoading(true);
-      else setIsFetchingMore(true);
-
-      setErrorMessage("");
-      try {
-        let endpoint;
-        if (query) {
-          endpoint = `${API_BASE_URL}/search/${contentType}?query=${encodeURIComponent(query)}&page=${pageNum}`;
-        } else {
-          endpoint = `${API_BASE_URL}/discover/${contentType}?sort_by=${sortBy}&page=${pageNum}`;
-          if (selectedGenre !== 0) {
-            endpoint += `&with_genres=${selectedGenre}`;
-          }
-          if (selectedLanguage) {
-            endpoint += `&with_original_language=${selectedLanguage}`;
-          }
-        }
-
-        const response = await fetch(endpoint, API_OPTIONS);
-        if (!response.ok) throw new Error("Failed to fetch movies");
-
-        const data = await response.json();
-        console.log(
-          `[CineTimez] Fetched ${data.results.length} results for ${contentType}`,
-        );
-
-        setMovieList((prev) =>
-          pageNum === 1 ? data.results : [...prev, ...data.results],
-        );
-        setHasMore(data.page < data.total_pages);
-
-        if (query && data.results.length > 0 && pageNum === 1) {
-          await updateSearchCount(query, data.results[0]);
-        }
-      } catch (error) {
-        console.error(`Error fetching movies: ${error}`);
-        setErrorMessage("Error fetching movies. Please try again later");
-      } finally {
-        setIsLoading(false);
-        setIsFetchingMore(false);
-      }
-    },
-    [selectedGenre, sortBy, selectedLanguage, contentType],
-  );
-
-  const loadTrendingMovies = async () => {
-    try {
-      const movies = await getTrendingMovies();
-      setTrendingMovies(movies || []);
-    } catch (error) {
-      console.error(`Error fetching trending movies: ${error}`);
-    }
-  };
-
-  const saveReview = (movieId, reviewData) => {
-    if (!user) {
-      loginWithGoogle();
-      return;
-    }
-    toast.success("Review saved!");
-    setReviews((prev) => {
-      const newReviews = { ...prev, [movieId]: reviewData };
-      updateAppwritePrefs({ reviews: newReviews });
-      return newReviews;
-    });
-  };
-
-  const deleteReview = (movieId) => {
-    toast("Review removed", { icon: "🗑️" });
-    setReviews((prev) => {
-      const newReviews = { ...prev };
-      delete newReviews[movieId];
-      updateAppwritePrefs({ reviews: newReviews });
-      return newReviews;
-    });
-  };
-
-  const toggleWatchlist = (movieId, targetFolderId = "default") => {
-    if (!user) {
-      loginWithGoogle();
-      return;
-    }
-
-    const folderToAdd =
-      targetFolderId !== "default"
-        ? targetFolderId
-        : showWatchlist
-          ? activeFolderId
-          : "default";
-    const isWatchlisted = folders.some((f) => f.movies.includes(movieId));
-
-    if (isWatchlisted) {
-      toast("Removed from Library", { icon: "🗑️" });
-    } else {
-      const folderName =
-        folders.find((f) => f.id === folderToAdd)?.name || "All Saved";
-      toast.success(`Archived to ${folderName}`);
-    }
-
-    setFolders((prevFolders) => {
-      const currentlyWatchlisted = prevFolders.some((f) =>
-        f.movies.includes(movieId),
-      );
-
-      let updatedFolders;
-      if (currentlyWatchlisted) {
-        updatedFolders = prevFolders.map((f) => ({
-          ...f,
-          movies: f.movies.filter((id) => id !== movieId),
-        }));
-      } else {
-        updatedFolders = prevFolders.map((f) =>
-          f.id === folderToAdd ? { ...f, movies: [...f.movies, movieId] } : f,
-        );
-      }
-
-      updateAppwritePrefs({
-        folders: updatedFolders,
-        watchlist: Array.from(new Set(updatedFolders.flatMap((f) => f.movies))),
-      });
-
-      return updatedFolders;
-    });
-  };
-
-  // Logic to fetch full details for the Watchlist collection
-  useEffect(() => {
-    const fetchWatchlistDetails = async () => {
-      const activeFolder =
-        folders.find((f) => f.id === activeFolderId) || folders[0];
-      const moviesToFetch = activeFolder ? activeFolder.movies : [];
-
-      if (!showWatchlist || moviesToFetch.length === 0) {
-        setWatchlistMovies([]);
-        return;
-      }
-
-      setIsFetchingWatchlist(true);
-      try {
-        const moviePromises = moviesToFetch.map((id) =>
-          fetch(
-            `${API_BASE_URL}/movie/${id}?api_key=${API_KEY}`,
-            API_OPTIONS,
-          ).then((res) => res.json()),
-        );
-        const results = await Promise.all(moviePromises);
-        setWatchlistMovies(results.filter((m) => m.id)); // Filter out any failed fetches
-      } catch (error) {
-        console.error("Error fetching watchlist details:", error);
-      } finally {
-        setIsFetchingWatchlist(false);
-      }
-    };
-
-    fetchWatchlistDetails();
-  }, [showWatchlist, activeFolderId, folders]);
-
-  // Unified Fetch & Reset Logic for main catalog
-  useEffect(() => {
-    if (showWatchlist) return; // Don't fetch catalog if viewing collection
-
-    setMovieList([]);
-    setErrorMessage("");
-    setPage(1);
-
-    fetchMovies(debouncedSearchTerm, 1);
-    loadTrendingMovies();
-  }, [
-    debouncedSearchTerm,
-    selectedGenre,
-    sortBy,
-    selectedLanguage,
-    contentType,
-    showWatchlist,
-  ]);
-
-  // Separate effect for Pagination only
-  useEffect(() => {
-    if (page > 1) {
-      fetchMovies(debouncedSearchTerm, page);
-    }
-  }, [page, debouncedSearchTerm, fetchMovies]);
 
   return (
     <main className="overflow-x-hidden">
@@ -436,18 +143,7 @@ const App = () => {
 
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
-          {!showWatchlist && (
-            <Filters
-              selectedGenre={selectedGenre}
-              setSelectedGenre={setSelectedGenre}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              selectedLanguage={selectedLanguage}
-              setSelectedLanguage={setSelectedLanguage}
-              contentType={contentType}
-              setContentType={setContentType}
-            />
-          )}
+          {!showWatchlist && <Filters />}
         </header>
 
         {trendingMovies.length > 0 && !searchTerm && !showWatchlist && (
@@ -522,7 +218,6 @@ const App = () => {
 
           {showWatchlist ? (
             <div className="min-h-[400px]">
-              {/* Folders Tab Bar */}
               <div className="flex items-center gap-3 mb-10 overflow-x-auto pb-4 custom-scrollbar">
                 {folders.map((folder) => (
                   <button
@@ -547,7 +242,10 @@ const App = () => {
 
                     {folder.id !== "default" && (
                       <div
-                        onClick={(e) => deleteFolder(folder.id, folder.name, e)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteFolder(folder.id);
+                        }}
                         className="ml-2 p-1 rounded-full hover:bg-red-500/20 text-gray-400 hover:text-red-500 transition-colors"
                       >
                         <X size={12} />
@@ -591,8 +289,6 @@ const App = () => {
                       key={movie.id}
                       movie={movie}
                       isWatchlisted={true}
-                      onToggleWatchlist={toggleWatchlist}
-                      onClick={setSelectedMovie}
                     />
                   ))}
                 </div>
@@ -626,8 +322,6 @@ const App = () => {
                             <MovieCard
                               movie={movie}
                               isWatchlisted={watchlist.includes(movie.id)}
-                              onToggleWatchlist={toggleWatchlist}
-                              onClick={setSelectedMovie}
                             />
                           </div>
                         );
@@ -637,8 +331,6 @@ const App = () => {
                             key={movie.id + index}
                             movie={movie}
                             isWatchlisted={watchlist.includes(movie.id)}
-                            onToggleWatchlist={toggleWatchlist}
-                            onClick={setSelectedMovie}
                           />
                         );
                       }
@@ -676,23 +368,15 @@ const App = () => {
         </section>
       </div>
 
-      {/* Modal Backdrop/Presence */}
       <AnimatePresence>
         {selectedMovie && (
           <MovieDetails
             movie={selectedMovie}
             onClose={() => setSelectedMovie(null)}
-            isWatchlisted={watchlist.includes(selectedMovie.id)}
-            onToggleWatchlist={toggleWatchlist}
-            folders={folders}
-            userReview={reviews[selectedMovie.id]}
-            onSaveReview={saveReview}
-            onDeleteReview={deleteReview}
           />
         )}
       </AnimatePresence>
 
-      {/* Folder Creation Modal */}
       <AnimatePresence>
         {showNewFolderModal && (
           <motion.div
@@ -716,11 +400,11 @@ const App = () => {
                 Organize your movies perfectly.
               </p>
 
-              <form onSubmit={createFolder}>
+              <form onSubmit={handleCreateFolder}>
                 <input
                   type="text"
                   autoFocus
-                  placeholder="e.g. Comfort Anime"
+                  placeholder="e.g. Comfort Movies"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   className="w-full bg-black/50 border border-white/10 text-white rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-accent transition-colors"

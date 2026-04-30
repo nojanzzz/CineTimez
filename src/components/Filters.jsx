@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { Globe } from "lucide-react";
-
-const API_BASE_URL = "https://api.themoviedb.org/3";
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+import { API_BASE_URL, API_OPTIONS } from "../lib/tmdb";
+import { useAppContext } from "../context/AppContext";
 
 const LANGUAGES = [
   { code: "", name: "Global" },
@@ -19,18 +17,24 @@ const SORT_OPTIONS = [
   { value: "vote_average.desc", label: "Top Rated" },
 ];
 
-const Filters = ({ selectedGenre, setSelectedGenre, sortBy, setSortBy, selectedLanguage, setSelectedLanguage, contentType, setContentType }) => {
+const Filters = () => {
+  const {
+    selectedGenre,
+    setSelectedGenre,
+    sortBy,
+    setSortBy,
+    selectedLanguage,
+    setSelectedLanguage,
+    contentType,
+    setContentType,
+  } = useAppContext();
+
   const [genres, setGenres] = useState([{ id: 0, name: "All Genres" }]);
 
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/genre/${contentType}/list?api_key=${API_KEY}`, {
-          headers: {
-             Authorization: `Bearer ${API_KEY}`,
-             accept: 'application/json'
-          }
-        });
+        const response = await fetch(`${API_BASE_URL}/genre/${contentType}/list`, API_OPTIONS);
         const data = await response.json();
         if (data.genres) {
           setGenres([{ id: 0, name: "All Genres" }, ...data.genres]);
@@ -41,11 +45,11 @@ const Filters = ({ selectedGenre, setSelectedGenre, sortBy, setSortBy, selectedL
     };
     fetchGenres();
     setSelectedGenre(0);
-  }, [contentType]);
+  }, [contentType, setSelectedGenre]);
 
   return (
     <div className="flex flex-col gap-10 mt-12 relative z-20">
-      {/* Primary Navigation Row: Balanced Center Layout */}
+      {/* Primary Navigation Row */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 border-b border-white/5 pb-10">
         
         {/* Left Side: Content Type */}

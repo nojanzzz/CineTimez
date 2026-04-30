@@ -11,28 +11,22 @@ import {
   ChevronDown,
   Folder,
 } from "lucide-react";
-import ReactPlayer from "react-player";
-
-const API_BASE_URL = "https://api.themoviedb.org/3";
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-const API_OPTIONS = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization: `Bearer ${API_KEY}`,
-  },
-};
+import { API_BASE_URL, API_OPTIONS } from "../lib/tmdb";
+import { useAppContext } from "../context/AppContext";
 
 const MovieDetails = ({
   movie,
   onClose,
-  onToggleWatchlist,
-  isWatchlisted,
-  folders,
-  userReview,
-  onSaveReview,
-  onDeleteReview,
 }) => {
+  const {
+    watchlist,
+    toggleWatchlist,
+    folders,
+    reviews,
+    saveReview,
+    deleteReview,
+  } = useAppContext();
+
   const [details, setDetails] = useState(null);
   const [cast, setCast] = useState([]);
   const [trailer, setTrailer] = useState(null);
@@ -41,6 +35,9 @@ const MovieDetails = ({
   const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [showDropdown, setShowDropdown] = useState(false);
+
+  const isWatchlisted = watchlist.includes(movie.id);
+  const userReview = reviews[movie.id];
 
   // Notes States
   const [isEditingReview, setIsEditingReview] = useState(!userReview);
@@ -67,7 +64,6 @@ const MovieDetails = ({
       setIsLoading(true);
       setError(false);
       try {
-        // Using append_to_response to get all data in ONE request (much more reliable)
         const response = await fetch(
           `${API_BASE_URL}/movie/${movie.id}?append_to_response=videos,credits,recommendations`,
           API_OPTIONS,
@@ -83,7 +79,6 @@ const MovieDetails = ({
         setCast(data.credits?.cast?.slice(0, 10) || []);
         setSimilar(data.recommendations?.results?.slice(0, 6) || []);
 
-        // Comprehensive trailer search
         const videos = data.videos?.results || [];
         const foundTrailer =
           videos.find(
@@ -103,7 +98,7 @@ const MovieDetails = ({
     };
 
     fetchMovieData();
-  }, [movie.id]); // Only re-run if movie ID changes
+  }, [movie.id]);
 
   if (!movie) return null;
 
@@ -165,7 +160,6 @@ const MovieDetails = ({
                     allowFullScreen
                   ></iframe>
 
-                  {/* YouTube Link Indicator */}
                   <div className="absolute bottom-4 left-4 z-10">
                     <a
                       href={`https://www.youtube.com/watch?v=${trailer.key}`}
@@ -281,7 +275,7 @@ const MovieDetails = ({
 
                     {isWatchlisted ? (
                       <button
-                        onClick={() => onToggleWatchlist(movie.id)}
+                        onClick={() => toggleWatchlist(movie.id)}
                         className="flex items-center justify-center gap-4 w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white shadow-[0_0_20px_rgba(239,68,68,0.2)]"
                       >
                         Discard from Library
@@ -289,7 +283,7 @@ const MovieDetails = ({
                     ) : (
                       <div className="flex gap-2 w-full relative">
                         <button
-                          onClick={() => onToggleWatchlist(movie.id)}
+                          onClick={() => toggleWatchlist(movie.id)}
                           className="flex-1 flex items-center justify-center gap-4 py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                         >
                           Archive to My List
@@ -323,7 +317,7 @@ const MovieDetails = ({
                                       <button
                                         key={f.id}
                                         onClick={() => {
-                                          onToggleWatchlist(movie.id, f.id);
+                                          toggleWatchlist(movie.id, f.id);
                                           setShowDropdown(false);
                                         }}
                                         className="w-full text-left px-3 py-2.5 text-xs font-bold text-white hover:bg-accent/20 hover:text-accent rounded-xl transition-colors flex items-center gap-2 truncate"
@@ -472,7 +466,7 @@ const MovieDetails = ({
                           )}
                           <button
                             onClick={() =>
-                              onSaveReview(movie.id, {
+                              saveReview(movie.id, {
                                 rating,
                                 text: reviewText,
                               })
@@ -518,7 +512,7 @@ const MovieDetails = ({
                               Edit
                             </button>
                             <button
-                              onClick={() => onDeleteReview(movie.id)}
+                              onClick={() => deleteReview(movie.id)}
                               className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-red-500 hover:text-white transition-colors"
                             >
                               Delete
